@@ -71,8 +71,10 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
         text = geoData["AREA_NAME"],
         hoverinfo="text+z",
         hovertemplate= f"%{{text}}<br>%{{z}} {rowArrayBar}<extra></extra>",
+        hoverlabel= dict(font = dict(family = "proxima-nova, sans-serif")),
         colorbar=dict(
             title=rowArrayBar,
+            tickfont = dict(family = "proxima-nova, sans-serif"),
         )
     ))
 
@@ -112,7 +114,8 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
             lat=mainlatArray[i],
             line=dict(width=2, color="red"),  
             text = wardNameArray[i],
-            name =  wardNameArray[i]  
+            name =  wardNameArray[i],
+            hoverlabel= dict(font = dict(family = "proxima-nova, sans-serif")),
         ))
 
     #Updates appearance
@@ -121,12 +124,13 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
         mapbox_zoom=mapZoomSettings[0], 
         mapbox_center={"lat": mapZoomSettings[1], "lon": mapZoomSettings[2]}, 
         margin={"r":0,"t":60,"l":0,"b":0}, 
-        title={"text": graphTitle, "x": 0.5, "xanchor": "center", "yanchor": "top", "font": {"size": 25}},
+        title={"text": graphTitle, "x": 0.5, "xanchor": "center", "yanchor": "top", "font": {"family": "proxima-nova, sans-serif", "weight": 700, "size": 25}},
         legend=dict(
-            x=1.05,               
-            y=0.2,               
+            x=1.1,               
+            y=0.25,               
             xanchor="left",  
             yanchor="middle",
+            font = {"family": "proxima-nova, sans-serif"}
         )
     )
 
@@ -139,13 +143,14 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
     return fig 
 
 
-fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 232, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250])
+fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 232, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [10, 43.710, -79.380, 2000, 1250])
 app = Dash(__name__)
 
 app.layout = html.Div(
     style={'color': '#252525'},
     children=[
-        html.H1("Toronto Census Visualizer", style={'textAlign': 'center'}),
+        html.H1("Toronto Census Visualizer", style={"textAlign": "center"}),
+        html.H3("By Derek Song, using data from Toronto Open Data", style={"textAlign": "center", "color": "white", "margin" : 0,}),
         html.Div(
             className = "flex",
             children=[
@@ -153,7 +158,7 @@ app.layout = html.Div(
                 dcc.Input(id="text-input", className="textbox", type="text", value="232")
             ]
         ),
-        dcc.Graph(id ="output-div", figure=fig, style={"height": "1075px"}),
+        dcc.Graph(id ="output-div", figure=fig, style={"height": "1060px"}),
     ]
 )
 
@@ -164,7 +169,7 @@ app.layout = html.Div(
 
 def update_output(value):
     value =  int(value)
-    fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250])
+    fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [10, 43.710, -79.380, 2000, 1250])
     return fig
 
 if __name__ == '__main__':
