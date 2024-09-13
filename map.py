@@ -6,6 +6,7 @@ import plotly.io as pio
 pio.kaleido.scope.mathjax = None
 from dash import Dash, html, dcc, Input, Output
 
+
 def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZoomSettings, fileName=None):
     '''
     A function to convert a single row of census 2021 data to a map relative to Toronto's neighbourhoods. 
@@ -40,7 +41,6 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
 
     #Imports Census Data
     censusData = pandas.read_csv(dataSource)
-    print(censusData)
 
     #Subtracts two for header and zero indexing
     rowCompare = int(rowCompare)
@@ -155,23 +155,41 @@ app.layout = html.Div(
             className = "flex",
             children=[
                 html.H2("Enter row number from Census 2021 data"),
-                dcc.Input(id="text-input", className="textbox", type="text", value="232")
+                
+                html.Div(
+                    className = "flex-col",
+                    children=[
+                        dcc.Input(id="search", className="textbox", type="text", value="232"),
+                        html.Div(id="suggestion", children=[], style={"position": "relative"}),
+                    ]
+                )
             ]
         ),
-        dcc.Graph(id ="output-div", figure=fig, style={"height": "1060px"}),
+        dcc.Graph(id ="graph", figure=fig, style={"height": "1060px"}),
     ]
 )
 
 @app.callback(
-    Output("output-div", "figure"),
-    [Input("text-input", "value")]
+    [Output("graph", "figure"),
+    Output("suggestion", "children")],
+    [Input("search", "value")]
 )
 
 def update_output(value):
-    value =  int(value)
-    fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [10, 43.710, -79.380, 2000, 1250])
-    return fig
+    suggestionHTML = html.Ul([])
+    fig = None 
+    try:
+        value =  int(value)
+        fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [10, 43.710, -79.380, 2000, 1250])
+    except ValueError:
+        censusData = pandas.read_csv("data/CityCensusData.csv")
+        suggestion = censusData[censusData["Neighbourhood Name"].str.contains(value, na=False, regex=True)]
+        suggestionsFive = suggestion.head(5)
+        suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
+        suggestionHTML = html.Ul([html.Li(p) for p in suggestionList])
+        
+    
+    return fig, suggestionHTML
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=8051)  
-    print("Dash online")
