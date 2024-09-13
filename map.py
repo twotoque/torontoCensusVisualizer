@@ -4,7 +4,7 @@ import pandas
 import json
 import plotly.io as pio
 pio.kaleido.scope.mathjax = None
-
+from dash import Dash, html, dcc
 
 def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZoomSettings, fileName=None):
     '''
@@ -98,8 +98,6 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
                     latArray.append(coordinate[1])
                 mainlonArray.append(lonArray)
                 mainlatArray.append(latArray)
-    print(mainlatArray)
-    print(wardNameArray)
     i = 0
     for i in range(len(mainlatArray)):
         fig.add_trace(go.Scattermapbox(
@@ -127,28 +125,27 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
         )
     )
 
-    fig.show()
     if fileName is not None and len(mapZoomSettings) == 5:
        fig.write_image(fileName, format="pdf", engine="kaleido", width= mapZoomSettings[3], height=mapZoomSettings[4])
     elif fileName is not None: 
         print("Error - missing or invaild mapZoomSettings. It should have 5 numbers, with the last 2 indicating the width and height of the export accordingly")
     else: 
         print("Error - missing fileName or other critical error. The last parameter in your function should be a string ending in .pdf to your exported file")
+    return fig 
 
-'''
 
+fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 2577, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250])
+app = Dash(__name__)
 
-censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 2577, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250],  "./pdf/CensusDrivingDataTorontoWide.pdf")
-censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 2580, "Amount of Census 2021 respondents who listed public transportation as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250],  "./pdf/CensusPublicTransportDataTorontoWide.pdf")
-censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 2581, "Amount of Census 2021 respondents who listed walking as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250],  "./pdf/CensusWalkingDataTorontoWide.pdf")
-censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 2582, "Amount of Census 2021 respondents who listed biking as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250],  "./pdf/CensusBikingDataTorontoWide.pdf")
-censusMap("data/Ward23Neighbourhoods.geojson", "data/Ward23CensusData.csv", 2577, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [12.6, 43.810, -79.245, 2000, 1250],  "./pdf/CensusDrivingDataWard23.pdf")
-censusMap("data/Ward23Neighbourhoods.geojson", "data/Ward23CensusData.csv", 2580, "Amount of Census 2021 respondents who listed public transportation as a method of transportation", "Respondents", [12.6, 43.810, -79.245, 2000, 1250],  "./pdf/CensusPublicTransportDataWard23.pdf")
-censusMap("data/Ward23Neighbourhoods.geojson", "data/Ward23CensusData.csv", 2581, "Amount of Census 2021 respondents who listed walking as a method of transportation", "Respondents", [12.6, 43.810, -79.245, 2000, 1250],  "./pdf/CensusWalkingDataWard23.pdf")
-censusMap("data/Ward23Neighbourhoods.geojson", "data/Ward23CensusData.csv", 2582, "Amount of Census 2021 respondents who listed biking as a method of transportation", "Respondents", [12.6, 43.810, -79.245, 2000, 1250],  "./pdf/CensusBikingDataWard23.pdf")
-pointMap(["data/DrivingDestinations-AgincourtNorth.geojson", "data/DrivingDestinations-MalvernEast.geojson", "data/DrivingDestinations-MalvernWest.geojson", "data/DrivingDestinations-Milliken.geojson", "data/DrivingDestinations-Morningside.geojson"], ["red", "blue", "purple", "green", "black"],  ["Agincourt North", "Malvern East", "Malvern West", "Milliken", "Morningside Heights"] ,"Ward 23 survey respondents regarding driving destinations", [9.5, 43.650, -79.400, 2000, 1250],  "./pdf/Ward23DrivingDestinations.pdf")
-pointMap(["data/PublicTransportDestinations-AgincourtNorth.geojson", "data/PublicTransportDestinations-MalvernEast.geojson", "data/PublicTransportDestinations-MalvernWest.geojson", "data/PublicTransportDestinations-Milliken.geojson", "data/PublicTransportDestinations-Morningside.geojson"], ["red", "blue", "purple", "green", "black"],  ["Agincourt North", "Malvern East", "Malvern West", "Milliken", "Morningside Heights"] ,"Ward 23 survey respondents regarding public transit destinations", [11, 43.650, -79.400, 2000, 1250],  "./pdf/Ward23PublicTransportDestinations.pdf")
-pointMap(["data/BikingDestinations-AgincourtNorth.geojson", "data/BikingDestinations-MalvernEast.geojson", "data/BikingDestinations-MalvernWest.geojson", "data/BikingDestinations-Milliken.geojson", "data/BikingDestinations-Morningside.geojson"], ["red", "blue", "purple", "green", "black"],  ["Agincourt North", "Malvern East", "Malvern West", "Milliken", "Morningside Heights"] ,"Ward 23 survey respondents regarding biking destinations", [11, 43.700, -79.300, 2000, 1250],  "./pdf/Ward23BikingDestinations.pdf")
-'''
+app.layout = html.Div(
+    style={'backgroundColor':'black', 'color': 'white'},
+    children=[
+        html.H1("Toronto Census Visualizer", style={'textAlign': 'center'}),
+        dcc.Graph(figure=fig,
+            style={"height": "1000px"}) 
+    ]
+)
 
-censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 2577, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250])
+if __name__ == '__main__':
+    app.run_server(debug=True, port=8051)  
+    print("Dash online")
