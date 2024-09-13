@@ -1,0 +1,34 @@
+@import url('https://use.typekit.net/ylu5afm.css');
+
+body {
+    font-family: "proxima-nova", sans-serif;
+    background-color:#6495ED  ;
+    
+}
+h1{
+    font-size: 4.5em;
+    text-align: left;
+    color: white;
+    font-weight: 900;
+    margin-bottom: 0;
+}
+h2 {
+    color:white
+}
+.flex {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    gap: 10px;
+}
+
+.textbox {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 15px;
+    font-size: 16px;
+    line-height: 1.5;
+}

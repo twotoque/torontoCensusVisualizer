@@ -4,7 +4,7 @@ import pandas
 import json
 import plotly.io as pio
 pio.kaleido.scope.mathjax = None
-from dash import Dash, html, dcc
+from dash import Dash, html, dcc, Input, Output
 
 def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZoomSettings, fileName=None):
     '''
@@ -40,16 +40,21 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
 
     #Imports Census Data
     censusData = pandas.read_csv(dataSource)
+    print(censusData)
 
     #Subtracts two for header and zero indexing
+    rowCompare = int(rowCompare)
     rowCompare -= 2
 
     #Traverses censusData, appends the rowCompare value as an int relative to Neighbourhood array
     df_geo = pandas.DataFrame(geoData.drop(columns="geometry"))
+    columnsSet = set(censusData.columns)
+    graphTitle = censusData.iloc[rowCompare]["Neighbourhood Name"]
+
     for _, row in df_geo.iterrows():
         neighbourhood_name = row["AREA_NAME"]
         
-        if neighbourhood_name in censusData.columns:
+        if neighbourhood_name in columnsSet:
             neighbourhood_data = censusData[neighbourhood_name] 
             rowArray.append(neighbourhood_data[rowCompare])
         else: 
@@ -77,7 +82,7 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
     cityGeoDataJSON = cityGeoData.to_json()
     cityGeoDataDict = json.loads(cityGeoDataJSON)
     cityGeoDataDict = {
-        "ward23GeoData": "FeatureCollection",
+        "cityGeoData": "FeatureCollection",
         "features": cityGeoDataDict["features"]
     }
 
@@ -105,7 +110,7 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
             showlegend=True,
             lon=mainlonArray[i],
             lat=mainlatArray[i],
-            line=dict(width=5, color="red"),  
+            line=dict(width=2, color="red"),  
             text = wardNameArray[i],
             name =  wardNameArray[i]  
         ))
@@ -116,12 +121,12 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
         mapbox_zoom=mapZoomSettings[0], 
         mapbox_center={"lat": mapZoomSettings[1], "lon": mapZoomSettings[2]}, 
         margin={"r":0,"t":60,"l":0,"b":0}, 
-        title={"text": title, "x": 0.5, "xanchor": "center", "yanchor": "top", "font": {"size": 25}},
+        title={"text": graphTitle, "x": 0.5, "xanchor": "center", "yanchor": "top", "font": {"size": 25}},
         legend=dict(
-            x=0.5,               
-            y=0.1,               
-            xanchor="center",  
-            yanchor="top",
+            x=1.05,               
+            y=0.2,               
+            xanchor="left",  
+            yanchor="middle",
         )
     )
 
@@ -134,17 +139,33 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
     return fig 
 
 
-fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 2577, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250])
+fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 232, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250])
 app = Dash(__name__)
 
 app.layout = html.Div(
-    style={'backgroundColor':'black', 'color': 'white'},
+    style={'color': '#252525'},
     children=[
         html.H1("Toronto Census Visualizer", style={'textAlign': 'center'}),
-        dcc.Graph(figure=fig,
-            style={"height": "1000px"}) 
+        html.Div(
+            className = "flex",
+            children=[
+                html.H2("Enter row number from Census 2021 data"),
+                dcc.Input(id="text-input", className="textbox", type="text", value="232")
+            ]
+        ),
+        dcc.Graph(id ="output-div", figure=fig, style={"height": "1075px"}),
     ]
 )
+
+@app.callback(
+    Output("output-div", "figure"),
+    [Input("text-input", "value")]
+)
+
+def update_output(value):
+    value =  int(value)
+    fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [11, 43.710, -79.380, 2000, 1250])
+    return fig
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=8051)  
