@@ -4,7 +4,7 @@ import pandas
 import json
 import plotly.io as pio
 pio.kaleido.scope.mathjax = None
-from dash import Dash, html, dcc, Input, Output
+from dash import Dash, html, dcc, Input, Output, State
 
 
 def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZoomSettings, fileName=None):
@@ -160,7 +160,7 @@ app.layout = html.Div(
                     className = "flex-col",
                     children=[
                         dcc.Input(id="search", className="textbox", type="text", value="232"),
-                        html.Div(id="suggestion", children=[], style={"position": "relative"}),
+                        html.Div(id="suggestion", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),
                     ]
                 )
             ]
@@ -172,24 +172,37 @@ app.layout = html.Div(
 @app.callback(
     [Output("graph", "figure"),
     Output("suggestion", "children")],
+    Output("suggestion", "style"),
     [Input("search", "value")]
 )
 
 def update_output(value):
     suggestionHTML = html.Ul([])
+    suggestionStyle = {"position": "relative", "display": "none"}
     fig = None 
     try:
         value =  int(value)
         fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [10, 43.710, -79.380, 2000, 1250])
     except ValueError:
         censusData = pandas.read_csv("data/CityCensusData.csv")
-        suggestion = censusData[censusData["Neighbourhood Name"].str.contains(value, na=False, regex=True)]
+        suggestion = censusData[censusData["Neighbourhood Name"].str.contains(value, na=False)]
+        indices = suggestion.index[:5]
+        print(indices)
         suggestionsFive = suggestion.head(5)
+        
         suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
-        suggestionHTML = html.Ul([html.Li(p) for p in suggestionList])
+        suggestionHTML = html.Ul([
+            html.Li(
+                html.Button(p, id=f"neigh-{i}", n_clicks=0)  
+            ) for i, p in enumerate(suggestionList)
+        ])
+        if suggestionList is not None: 
+            suggestionStyle = {"position": "relative", "display": "block"}
         
     
-    return fig, suggestionHTML
+    return fig, suggestionHTML, suggestionStyle
+
+
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=8051)  

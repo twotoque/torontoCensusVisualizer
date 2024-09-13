@@ -18,25 +18,39 @@ h2 {
 .flex {
     display: flex;
     justify-content: center;
-    align-items: center;
+    padding-top: 3rem;
+    padding-bottom: 2rem;
     margin: 0;
     gap: 10px;
 }
 .flex-col{
     display: flex;
+    width: 30rem;
     flex-direction: column;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     margin: 0;
     margin-top: auto
 }
-
 .textbox {
     width: 100%;
-    max-width: 400px;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 15px;
     font-size: 16px;
     line-height: 1.5;
+}
+.textbox-suggestion {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    background-color: white;
+    border-radius: 15px;
+    font-size: 16px;
+    line-height: 1.5;
+    display: block;
+}
+
+ul:empty {
+    display: none;
 }
