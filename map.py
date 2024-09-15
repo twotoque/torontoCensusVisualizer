@@ -282,11 +282,11 @@ def update_output(value):
     State("multiVarInput", "value")          
 )
 
-def update_array(n_clicks, input_value):
+def update_array(_, input_value):
     global input_array, figbarstackGlobal
     ctx = dash.callback_context
     fig_bar_stack = figbarstackGlobal
-    if ctx.triggered and input_value <= 2604:
+    if ctx.triggered and int(input_value) <= 2604:
         input_array.append(int(input_value))  # Add input value to the array
         
         i = 0 
