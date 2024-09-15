@@ -195,6 +195,58 @@ def censusBar (dataSource, rowSelect, fileName = None):
     )
     return fig_bar
 
+
+def censusBarStack (dataSource, input_array):
+    i = 0 
+    rowArray = []
+    categoryValuesArray = {}
+
+    #Load census csv data
+
+    censusData = pandas.read_csv(dataSource)
+
+    while i < len(input_array):
+        rowArray.append(censusData.iloc[input_array[i]])
+        i += 1
+
+    for index, row in enumerate(rowArray):
+        key = f"categoryValues_{index+1}"
+        categoryValuesArray[key] = list(map(float, row.iloc[1:].values))
+
+    x_values = rowArray[0].index[1:]
+
+    graphData = {"Neighbourhoood": x_values}
+
+    for key, y_values in categoryValuesArray.items():
+        graphData[key] = y_values
+
+    graphDataFrame = pandas.DataFrame(graphData)
+
+    plotMelt_censusData = graphDataFrame.melt(id_vars="Neighbourhoood", var_name="Category", value_name="Value")
+
+    print(plotMelt_censusData)
+
+    #Assign bar graph variable
+    fig_bar_stack = go.Figure()
+
+    #Plotly tracing
+    for category in plotMelt_censusData['Category'].unique():
+        category_data = plotMelt_censusData[plotMelt_censusData ['Category'] == category]
+        fig_bar_stack.add_trace(go.Bar(
+            x=category_data["Neighbourhoood"],
+            y=category_data["Value"],
+            name=category
+        ))
+
+    #Render bar graph
+    fig_bar_stack.update_layout(
+        title="Multi-variable stacked bar graph using Census 2021 data, City of Toronto",
+        xaxis_title="Neighbourhoood",
+        yaxis_title="Value",
+        barmode="stack"
+    )
+    return fig_bar_stack
+
 fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 35, "Respondents", [10, 43.710, -79.380, 2000, 1250])
 fig_bar = censusBar("data/CityCensusData.csv", 35)
 app = Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callbacks='initial_duplicate')
@@ -226,10 +278,16 @@ app.layout = html.Div(
             className = "flex",
             children=[
                 html.H2("Enter row number from Census 2021 data", style={"marginRight": "20px"}),
-                dcc.Input(id="multiVarInput", className="textbox", type="text", placeholder="35", debounce = True),
+                    html.Div(
+                        className = "flex-col",
+                        children=[
+                            dcc.Input(id="multiVarInput", className="textbox", type="text", value="35", debounce = True),
+                            html.Div(id="suggestionStack", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),]
+                    ),
                 html.Button("Add to Array",id="multiVarConfirm", n_clicks=0),
             ]
         ),
+        html.Div(id="buttonContainer"),
         html.Div(id="array-output"),
         dcc.Graph(id="graphBarStack", style={"height": "1060px"}),
     ]
@@ -278,68 +336,62 @@ def update_output(value):
 @app.callback(
     Output("array-output", "children"),
     Output("graphBarStack", "figure"),
-    Input("multiVarConfirm", "n_clicks"),  
+    Output("suggestionStack", "children"),
+    Output("suggestionStack", "style"),
+    Output('buttonContainer', 'children'),
+    Input("multiVarConfirm", "n_clicks"),
+    Input({"type": "remove-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
     State("multiVarInput", "value")          
 )
 
-def update_array(_, input_value):
+def update_array(_, nc, input_value):
     global input_array, figbarstackGlobal
+    suggestionHTML = html.Ul([])
+    suggestionStyle = {"position": "relative", "display": "none"}
     ctx = dash.callback_context
     fig_bar_stack = figbarstackGlobal
-    if ctx.triggered and int(input_value) <= 2604:
-        input_array.append(int(input_value))  # Add input value to the array
-        
-        i = 0 
-        rowArray = []
-        categoryValuesArray = {}
-
-        #Load census csv data
-        censusData = pandas.read_csv('data/CityCensusData.csv')
-
-        while i < len(input_array):
-            rowArray.append(censusData.iloc[input_array[i]])
-            i += 1
-
-        for index, row in enumerate(rowArray):
-            key = f"categoryValues_{index+1}"
-            categoryValuesArray[key] = list(map(float, row.iloc[1:].values))
-
-        x_values = rowArray[0].index[1:]
-
-        graphData = {"Neighbourhoood": x_values}
-
-        for key, y_values in categoryValuesArray.items():
-            graphData[key] = y_values
-
-        graphDataFrame = pandas.DataFrame(graphData)
-
-        plotMelt_censusData = graphDataFrame.melt(id_vars="Neighbourhoood", var_name="Category", value_name="Value")
-
-        print(plotMelt_censusData)
-
-        #Assign bar graph variable
-        fig_bar_stack = go.Figure()
-
-        #Plotly tracing
-        for category in plotMelt_censusData['Category'].unique():
-            category_data = plotMelt_censusData[plotMelt_censusData ['Category'] == category]
-            fig_bar_stack.add_trace(go.Bar(
-                x=category_data["Neighbourhoood"],
-                y=category_data["Value"],
-                name=category
-            ))
-
-        #Render bar graph
-        fig_bar_stack.update_layout(
-            title="Multi-variable stacked bar graph using Census 2021 data, City of Toronto",
-            xaxis_title="Neighbourhoood",
-            yaxis_title="Value",
-            barmode="stack"
-        )
+    censusData = pandas.read_csv('data/CityCensusData.csv')
+    
+    if ctx.triggered and "remove-btn" in ctx.triggered[0]["prop_id"]:
+        triggered = ctx.triggered
+        indexStr = triggered[0]["prop_id"].split('.')[0]
+        indexDic= json.loads(indexStr.replace("'", '"'))
+        if "index" in indexDic:
+            index = indexDic["index"]
+            
+            # Ensure index is valid and within bounds
+            if index < len(input_array):
+                input_array.pop(index)
+        fig_bar_stack = censusBarStack("data/CityCensusData.csv", input_array)
         figbarstackGlobal = fig_bar_stack
+    
+    elif input_value.isnumeric():
+        if ctx.triggered and int(input_value) <= 2604:
+            input_array.append(int(input_value))  # Add input value to the array
+            print(input_array)
+            fig_bar_stack = censusBarStack("data/CityCensusData.csv", input_array)
+            figbarstackGlobal = fig_bar_stack
+
+    
     else:
-        print("Invalid input")
-    return input_array, fig_bar_stack
+        suggestion = censusData[censusData["Neighbourhood Name"].str.contains(input_value, case=False, regex=False, na=False)]
+        indices = suggestion.index[:5]
+        suggestionsFive = suggestion.head(5)
+        suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
+        combinedList = [f"Row number: {ind} - {string}" for ind, string in zip(indices, suggestionList)]
+        suggestionHTML = html.Ul([html.Li([
+            html.Li(f"Row Number: {str(indices[i])} {suggestionList[i]}")
+            for i, p in enumerate(combinedList)
+        ])
+        ])
+        
+        
+        if suggestionList is not None: 
+             suggestionStyle = {"position": "relative", "display": "block"}
+        
+    buttons = [html.Button(val, id={"type": "remove-btn", "index": i}, n_clicks=0) for i, val in enumerate(input_array)]
+
+    return input_array, fig_bar_stack, suggestionHTML, suggestionStyle, buttons
 
 
 '''
