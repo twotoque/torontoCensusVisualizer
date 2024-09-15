@@ -2,14 +2,16 @@ import plotly.graph_objects as go
 import geopandas as gpd 
 import pandas
 import json
+import dash
 import plotly.io as pio
 pio.kaleido.scope.mathjax = None
 from dash import Dash, html, dcc, Input, Output, State
 import statistics
 
-suggestionSearchGlobal = [1, 2, 3, 4, 5]
+input_array = []
 figGlobal = go.Figure()
 figbarGlobal = go.Figure()
+figbarstackGlobal = go.Figure()
 def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSettings, fileName=None):
     '''
     A function to convert a single row of census 2021 data to a map relative to Toronto's neighbourhoods. 
@@ -53,7 +55,6 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
     df_geo = pandas.DataFrame(geoData.drop(columns="geometry"))
     columnsSet = set(censusData.columns)
     graphTitle = censusData.iloc[rowCompare]["Neighbourhood Name"]
-    print(graphTitle)
     for _, row in df_geo.iterrows():
         neighbourhood_name = row["AREA_NAME"]
         
@@ -139,10 +140,6 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
 
     if fileName is not None and len(mapZoomSettings) == 5:
        fig.write_image(fileName, format="pdf", engine="kaleido", width= mapZoomSettings[3], height=mapZoomSettings[4])
-    elif fileName is not None: 
-        print("Error - missing or invaild mapZoomSettings. It should have 5 numbers, with the last 2 indicating the width and height of the export accordingly")
-    else: 
-        print("Error - missing fileName or other critical error. The last parameter in your function should be a string ending in .pdf to your exported file")
     return fig 
 
 def censusBar (dataSource, rowSelect, fileName = None):
@@ -154,12 +151,10 @@ def censusBar (dataSource, rowSelect, fileName = None):
     graphTitle = rowArray[0]
     rowArray.pop(0) 
     rowArrayFloat =  list(map(float, rowArray))
-    print(rowArrayFloat)
     cityWideMedian = statistics.median(rowArrayFloat)
 
     x_values = censusData.columns.to_list()
     x_values.pop(0)
-    print(x_values)
     
     fig_bar.add_trace(go.Bar(
         x=x_values,
@@ -226,8 +221,17 @@ app.layout = html.Div(
         ),
         dcc.Graph(id="graph", style={"height": "1060px"}),
         dcc.Graph(id="graphBar", style={"height": "1060px"}),
-        html.H1("Toronto Census Visualizer", style={"textAlign": "center", "font-size": "3.5rem"}),
-        html.Div(id="history")
+        html.H1("Multi-variable stacked graphs", style={"textAlign": "center", "font-size": "3.5rem"}),
+                html.Div(
+            className = "flex",
+            children=[
+                html.H2("Enter row number from Census 2021 data", style={"marginRight": "20px"}),
+                dcc.Input(id="multiVarInput", className="textbox", type="text", placeholder="35", debounce = True),
+                html.Button("Add to Array",id="multiVarConfirm", n_clicks=0),
+            ]
+        ),
+        html.Div(id="array-output"),
+        dcc.Graph(id="graphBarStack", style={"height": "1060px"}),
     ]
 )
 
@@ -245,26 +249,20 @@ def update_output(value):
     suggestionStyle = {"position": "relative", "display": "none"}
     fig = figGlobal
     fig_bar = figbarGlobal
-    print(f"value is {value}") 
     try:
         value =  int(value) 
         value += 2 
-        print("Generating for" + str(value))
         fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Respondents", [10, 43.710, -79.380, 2000, 1250])
         figGlobal = fig
         fig_bar = censusBar("data/CityCensusData.csv", value)
         figbarGlobal = fig_bar
     except ValueError:
-        print("Searching for" + value)
         censusData = pandas.read_csv("data/CityCensusData.csv")
         suggestion = censusData[censusData["Neighbourhood Name"].str.contains(value, case=False, regex=False, na=False)]
         indices = suggestion.index[:5]
         suggestionsFive = suggestion.head(5)
-        
         suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
-
         combinedList = [f"Row number: {ind} - {string}" for ind, string in zip(indices, suggestionList)]
-
         suggestionHTML = html.Ul([html.Li([
             html.Li(f"Row Number: {str(indices[i])} {suggestionList[i]}")
             for i, p in enumerate(combinedList)
@@ -273,9 +271,77 @@ def update_output(value):
         
         
         if suggestionList is not None: 
-            suggestionStyle = {"position": "relative", "display": "block"}
+             suggestionStyle = {"position": "relative", "display": "block"}
         
     return fig, fig_bar, suggestionHTML, suggestionStyle
+
+@app.callback(
+    Output("array-output", "children"),
+    Output("graphBarStack", "figure"),
+    Input("multiVarConfirm", "n_clicks"),  
+    State("multiVarInput", "value")          
+)
+
+def update_array(n_clicks, input_value):
+    global input_array, figbarstackGlobal
+    ctx = dash.callback_context
+    fig_bar_stack = figbarstackGlobal
+    if ctx.triggered and input_value <= 2604:
+        input_array.append(int(input_value))  # Add input value to the array
+        
+        i = 0 
+        rowArray = []
+        categoryValuesArray = {}
+
+        #Load census csv data
+        censusData = pandas.read_csv('data/CityCensusData.csv')
+
+        while i < len(input_array):
+            rowArray.append(censusData.iloc[input_array[i]])
+            i += 1
+
+        for index, row in enumerate(rowArray):
+            key = f"categoryValues_{index+1}"
+            categoryValuesArray[key] = list(map(float, row.iloc[1:].values))
+
+        x_values = rowArray[0].index[1:]
+
+        graphData = {"Neighbourhoood": x_values}
+
+        for key, y_values in categoryValuesArray.items():
+            graphData[key] = y_values
+
+        graphDataFrame = pandas.DataFrame(graphData)
+
+        plotMelt_censusData = graphDataFrame.melt(id_vars="Neighbourhoood", var_name="Category", value_name="Value")
+
+        print(plotMelt_censusData)
+
+        #Assign bar graph variable
+        fig_bar_stack = go.Figure()
+
+        #Plotly tracing
+        for category in plotMelt_censusData['Category'].unique():
+            category_data = plotMelt_censusData[plotMelt_censusData ['Category'] == category]
+            fig_bar_stack.add_trace(go.Bar(
+                x=category_data["Neighbourhoood"],
+                y=category_data["Value"],
+                name=category
+            ))
+
+        #Render bar graph
+        fig_bar_stack.update_layout(
+            title="Multi-variable stacked bar graph using Census 2021 data, City of Toronto",
+            xaxis_title="Neighbourhoood",
+            yaxis_title="Value",
+            barmode="stack"
+        )
+        figbarstackGlobal = fig_bar_stack
+    else:
+        print("Invalid input")
+    return input_array, fig_bar_stack
+
+
 '''
 @app.callback(
     [Output("graph", "figure", allow_duplicate=True)],
