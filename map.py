@@ -6,8 +6,10 @@ import plotly.io as pio
 pio.kaleido.scope.mathjax = None
 from dash import Dash, html, dcc, Input, Output, State
 
+suggestionSearchGlobal = [1, 2, 3, 4, 5]
+figGlobal = go.Figure()
 
-def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZoomSettings, fileName=None):
+def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSettings, fileName=None):
     '''
     A function to convert a single row of census 2021 data to a map relative to Toronto's neighbourhoods. 
     ----
@@ -50,7 +52,7 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
     df_geo = pandas.DataFrame(geoData.drop(columns="geometry"))
     columnsSet = set(censusData.columns)
     graphTitle = censusData.iloc[rowCompare]["Neighbourhood Name"]
-
+    print(graphTitle)
     for _, row in df_geo.iterrows():
         neighbourhood_name = row["AREA_NAME"]
         
@@ -143,8 +145,8 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, title, rowArrayBar, mapZ
     return fig 
 
 
-fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 232, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [10, 43.710, -79.380, 2000, 1250])
-app = Dash(__name__)
+fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 35, "Respondents", [10, 43.710, -79.380, 2000, 1250])
+app = Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callbacks='initial_duplicate')
 
 app.layout = html.Div(
     style={'color': '#252525'},
@@ -159,50 +161,75 @@ app.layout = html.Div(
                 html.Div(
                     className = "flex-col",
                     children=[
-                        dcc.Input(id="search", className="textbox", type="text", value="232"),
+                        dcc.Input(id="search", className="textbox", type="text", value="35", debounce = True),
                         html.Div(id="suggestion", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),
+                        html.Div(id='output')
                     ]
                 )
             ]
         ),
-        dcc.Graph(id ="graph", figure=fig, style={"height": "1060px"}),
+        dcc.Graph(id="graph", style={"height": "1060px"})
     ]
 )
 
 @app.callback(
-    [Output("graph", "figure"),
+    [Output("graph", "figure", allow_duplicate=True),
     Output("suggestion", "children")],
     Output("suggestion", "style"),
     [Input("search", "value")]
 )
 
 def update_output(value):
+    global figGlobal
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
-    fig = None 
+    fig = figGlobal
     try:
-        value =  int(value)
-        fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [10, 43.710, -79.380, 2000, 1250])
+        value =  int(value) 
+        value += 2 
+        print("Generating for" + str(value))
+        fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Respondents", [10, 43.710, -79.380, 2000, 1250])
+        figGlobal = fig
     except ValueError:
+        print("Searching for" + value)
         censusData = pandas.read_csv("data/CityCensusData.csv")
-        suggestion = censusData[censusData["Neighbourhood Name"].str.contains(value, na=False)]
+        suggestion = censusData[censusData["Neighbourhood Name"].str.contains(value, case=False, regex=False, na=False)]
         indices = suggestion.index[:5]
-        print(indices)
         suggestionsFive = suggestion.head(5)
         
         suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
-        suggestionHTML = html.Ul([
-            html.Li(
-                html.Button(p, id=f"neigh-{i}", n_clicks=0)  
-            ) for i, p in enumerate(suggestionList)
+
+        combinedList = [f"Row number: {ind} - {string}" for ind, string in zip(indices, suggestionList)]
+
+        suggestionHTML = html.Ul([html.Li([
+            html.Li(f"Row Number: {str(indices[i])} {suggestionList[i]}")
+            for i, p in enumerate(combinedList)
+        ])
         ])
         if suggestionList is not None: 
             suggestionStyle = {"position": "relative", "display": "block"}
         
     
     return fig, suggestionHTML, suggestionStyle
+'''
+@app.callback(
+    [Output("graph", "figure", allow_duplicate=True)],
+    [Input(f"neigh-{i}", 'n_clicks') for i in range(5)]
+)
+def update_output(*args):
+    global suggestionSearchGlobal  
+    ctx = dash.callback_context
+    if ctx.triggered:
+        triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    if triggered_id == "neigh-0":
+        print(suggestionSearchGlobal[0])
+        fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", int(suggestionSearchGlobal[0]), "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [10, 43.710, -79.380, 2000, 1250])
 
+    print(f"Triggered ID: {triggered_id}")
+    print(suggestionSearchGlobal)
 
-
+    return fig
+'''
 if __name__ == '__main__':
     app.run_server(debug=True, port=8051)  
