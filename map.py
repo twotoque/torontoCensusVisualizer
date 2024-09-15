@@ -5,10 +5,11 @@ import json
 import plotly.io as pio
 pio.kaleido.scope.mathjax = None
 from dash import Dash, html, dcc, Input, Output, State
+import statistics
 
 suggestionSearchGlobal = [1, 2, 3, 4, 5]
 figGlobal = go.Figure()
-
+figbarGlobal = go.Figure()
 def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSettings, fileName=None):
     '''
     A function to convert a single row of census 2021 data to a map relative to Toronto's neighbourhoods. 
@@ -144,8 +145,58 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
         print("Error - missing fileName or other critical error. The last parameter in your function should be a string ending in .pdf to your exported file")
     return fig 
 
+def censusBar (dataSource, rowSelect, fileName = None):
+    
+    fig_bar = go.Figure()
+    rowSelect -= 2
+    censusData = pandas.read_csv(dataSource)
+    rowArray = censusData.iloc[rowSelect].to_list()
+    title = rowArray[0]
+    rowArray.pop(0) 
+    rowArrayFloat =  list(map(float, rowArray))
+    print(rowArrayFloat)
+    cityWideMedian = statistics.median(rowArrayFloat)
+
+    x_values = censusData.columns.to_list()
+    x_values.pop(0)
+    print(x_values)
+    
+    fig_bar.add_trace(go.Bar(
+        x=x_values,
+        y=rowArrayFloat,
+        name="Neighbourhood<br>Data",
+        marker_color="blue"
+    ))
+
+    x1_endpoint = len(fig_bar.data[0]["x"])
+    
+    fig_bar.add_shape(
+        type="line",
+        x0=-0.5,  
+        x1=x1_endpoint - 0.35,
+        y0=cityWideMedian,
+        y1=cityWideMedian,
+        line=dict(color="red", width=3, dash="dash"), 
+        name=f"City-wide Median<br>({cityWideMedian})"
+    )
+    fig_bar.add_trace(go.Scatter(
+        x=[None],  
+        y=[None],
+        mode="lines",
+        line=dict(color="red", width=2, dash="dash"),
+        showlegend=True,
+        name=f"City-wide Median<br>({cityWideMedian})"
+    ))
+
+    fig_bar.update_layout(
+        title= title,
+        xaxis_title= "Neighbourhood",
+        yaxis_title= "Value",
+    )
+    return fig_bar
 
 fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 35, "Respondents", [10, 43.710, -79.380, 2000, 1250])
+fig_bar = censusBar("data/CityCensusData.csv", 35)
 app = Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callbacks='initial_duplicate')
 
 app.layout = html.Div(
@@ -156,40 +207,48 @@ app.layout = html.Div(
         html.Div(
             className = "flex",
             children=[
-                html.H2("Enter row number from Census 2021 data"),
+                html.H2("Enter row number from Census 2021 data", style={"marginRight": "20px"}),
                 
                 html.Div(
                     className = "flex-col",
                     children=[
                         dcc.Input(id="search", className="textbox", type="text", value="35", debounce = True),
                         html.Div(id="suggestion", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),
-                        html.Div(id='output')
+                        html.Div(id="output")
                     ]
                 )
             ]
         ),
-        dcc.Graph(id="graph", style={"height": "1060px"})
+        dcc.Graph(id="graph", style={"height": "1060px"}),
+        dcc.Graph(id="graphBar", style={"height": "1060px"}),
+        html.H1("Toronto Census Visualizer", style={"textAlign": "center", "font-size": "3.5rem"}),
+        html.Div(id="history")
     ]
 )
 
 @app.callback(
-    [Output("graph", "figure", allow_duplicate=True),
-    Output("suggestion", "children")],
-    Output("suggestion", "style"),
+    [Output("graph", "figure"),
+    Output("graphBar", "figure"),
+    Output("suggestion", "children"),
+    Output("suggestion", "style")],
     [Input("search", "value")]
 )
 
 def update_output(value):
-    global figGlobal
+    global figGlobal, figbarGlobal
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
     fig = figGlobal
+    fig_bar = figbarGlobal
+    print(f"value is {value}") 
     try:
         value =  int(value) 
         value += 2 
         print("Generating for" + str(value))
         fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Respondents", [10, 43.710, -79.380, 2000, 1250])
         figGlobal = fig
+        fig_bar = censusBar("data/CityCensusData.csv", value)
+        figbarGlobal = fig_bar
     except ValueError:
         print("Searching for" + value)
         censusData = pandas.read_csv("data/CityCensusData.csv")
@@ -206,11 +265,12 @@ def update_output(value):
             for i, p in enumerate(combinedList)
         ])
         ])
+        
+        
         if suggestionList is not None: 
             suggestionStyle = {"position": "relative", "display": "block"}
         
-    
-    return fig, suggestionHTML, suggestionStyle
+    return fig, fig_bar, suggestionHTML, suggestionStyle
 '''
 @app.callback(
     [Output("graph", "figure", allow_duplicate=True)],
