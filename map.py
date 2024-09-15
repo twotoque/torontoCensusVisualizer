@@ -151,7 +151,7 @@ def censusBar (dataSource, rowSelect, fileName = None):
     rowSelect -= 2
     censusData = pandas.read_csv(dataSource)
     rowArray = censusData.iloc[rowSelect].to_list()
-    title = rowArray[0]
+    graphTitle = rowArray[0]
     rowArray.pop(0) 
     rowArrayFloat =  list(map(float, rowArray))
     print(rowArrayFloat)
@@ -189,9 +189,14 @@ def censusBar (dataSource, rowSelect, fileName = None):
     ))
 
     fig_bar.update_layout(
-        title= title,
+        title={"text": graphTitle, "x": 0.5, "xanchor": "center", "yanchor": "top", "font": {"family": "proxima-nova, sans-serif", "weight": 700, "size": 25}},
         xaxis_title= "Neighbourhood",
         yaxis_title= "Value",
+        hoverlabel= dict(font = dict(family = "proxima-nova, sans-serif")),
+        title_font=dict(family="proxima-nova, sans-serif"),
+        xaxis_title_font=dict(family="proxima-nova, sans-serif"),
+        yaxis_title_font=dict(family="proxima-nova, sans-serif"),
+        font=dict(family="proxima-nova, sans-serif"),
     )
     return fig_bar
 
