@@ -341,10 +341,11 @@ def update_output(value):
     Output('buttonContainer', 'children'),
     Input("multiVarConfirm", "n_clicks"),
     Input({"type": "remove-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
+    Input({"type": "search-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
     State("multiVarInput", "value")          
 )
 
-def update_array(_, nc, input_value):
+def update_array(_, nc1, nc2, input_value):
     global input_array, figbarstackGlobal
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
@@ -365,6 +366,19 @@ def update_array(_, nc, input_value):
         fig_bar_stack = censusBarStack("data/CityCensusData.csv", input_array)
         figbarstackGlobal = fig_bar_stack
     
+    elif ctx.triggered and "search-btn" in ctx.triggered[0]["prop_id"]:
+        triggered = ctx.triggered
+        indexStr = triggered[0]["prop_id"].split('.')[0]
+        indexDic= json.loads(indexStr.replace("'", '"'))
+        print(indexDic)
+        if "index" in indexDic:
+            index = indexDic["index"]
+            input_array.append(index)
+
+        print(input_array)
+        fig_bar_stack = censusBarStack("data/CityCensusData.csv", input_array)
+        figbarstackGlobal = fig_bar_stack
+
     elif input_value.isnumeric():
         if ctx.triggered and int(input_value) <= 2604:
             input_array.append(int(input_value))  # Add input value to the array
@@ -380,11 +394,17 @@ def update_array(_, nc, input_value):
         suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
         combinedList = [f"Row number: {ind} - {string}" for ind, string in zip(indices, suggestionList)]
         suggestionHTML = html.Ul([html.Li([
+            html.Button (f"Row Number: {str(indices[i])} {suggestionList[i]}", id={"type": "search-btn", "index": int(indices[i])}, n_clicks=0)
+            for i, p in enumerate(combinedList)
+        ])
+        ])
+        ''' 
+        suggestionHTML = html.Ul([html.Li([
             html.Li(f"Row Number: {str(indices[i])} {suggestionList[i]}")
             for i, p in enumerate(combinedList)
         ])
         ])
-        
+        '''
         
         if suggestionList is not None: 
              suggestionStyle = {"position": "relative", "display": "block"}
