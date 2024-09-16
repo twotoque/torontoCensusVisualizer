@@ -213,9 +213,11 @@ def censusBarStack (dataSource, input_array):
     censusData = pandas.read_csv(dataSource)
 
     while i < len(input_array):
-        input_array[i] -= 2
+        ''' In operating within a non-front-end environemnt include this statement. 
+        -> input_array[i] -= 2
+        This is conducted in the front-end as it'll adjust the cancel buttons'''
         rowArray.append(censusData.iloc[input_array[i]])
-        graphTitleArray.append(censusData.iloc[i]["Neighbourhood Name"])
+        graphTitleArray.append(censusData.iloc[input_array[i]]["Neighbourhood Name"])
         i += 1
 
     for index, row in enumerate(rowArray):
@@ -293,7 +295,7 @@ app.layout = html.Div(
                             dcc.Input(id="multiVarInput", className="textbox fulwidth", type="text", value="35", debounce = True),
                             html.Div(id="suggestionStack", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),]
                     ),
-                html.Button("Add or Search",id="multiVarConfirm", className="textbox addArray", n_clicks=0),
+                html.Button("Add or Search", id="multiVarConfirm", className=" textbox addArray", n_clicks=0),
             ]
         ),
         html.Div(id="buttonContainer"),
@@ -375,6 +377,7 @@ def update_array(_, nc1, nc2, input_value):
     fig_bar_stack = figbarstackGlobal
     censusData = pandas.read_csv('data/CityCensusData.csv')
     
+    
     if ctx.triggered and "remove-btn" in ctx.triggered[0]["prop_id"]:
         triggered = ctx.triggered
         indexStr = triggered[0]["prop_id"].split('.')[0]
@@ -395,19 +398,21 @@ def update_array(_, nc1, nc2, input_value):
         print(indexDic)
         if "index" in indexDic:
             index = indexDic["index"]
-            input_array.append(index)
+            input_array.append(index - 2)
 
+        print("Input array")
         print(input_array)
         fig_bar_stack = censusBarStack("data/CityCensusData.csv", input_array)
         figbarstackGlobal = fig_bar_stack
 
     elif input_value.isnumeric():
         if ctx.triggered and int(input_value) <= 2604:
-            input_array.append(int(input_value))  # Add input value to the array
+            input_array.append(int(input_value) - 2)  # Add input value to the array
             print(input_array)
             fig_bar_stack = censusBarStack("data/CityCensusData.csv", input_array)
             figbarstackGlobal = fig_bar_stack
-
+        elif ctx.triggered and int(input_value) > 2604 or ctx.triggered and int(input_value) < 2:
+            raise ValueError ("Invaild input")
     
     else:
         suggestion = censusData[censusData["Neighbourhood Name"].str.contains(input_value, case=False, regex=False, na=False)]
@@ -416,7 +421,7 @@ def update_array(_, nc1, nc2, input_value):
         suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
         combinedList = [f"Row number: {ind} - {string}" for ind, string in zip(indices, suggestionList)]
         suggestionHTML = html.Ul([html.Li([
-            html.Button (f"Row Number: {str(indices[i] + 2)} {suggestionList[i]}", id={"type": "search-btn", "index": int(indices[i])}, n_clicks=0)
+            html.Button (f"Row Number: {str(indices[i] + 2)} {suggestionList[i]}", id={"type": "search-btn", "index": int(indices[i] + 2)}, n_clicks=0)
             for i, p in enumerate(combinedList)
         ])
         ])
@@ -431,7 +436,7 @@ def update_array(_, nc1, nc2, input_value):
         if suggestionList is not None: 
              suggestionStyle = {"position": "relative", "display": "block"}
         
-    buttons = [html.Button(val + 2, id={"type": "remove-btn", "index": i}, n_clicks=0) for i, val in enumerate(input_array)]
+    buttons = [html.Button(val + 2, id={"type": "remove-btn", "index": i}, className= "textbox addArray", n_clicks=0) for i, val in enumerate(input_array)]
 
     return fig_bar_stack, suggestionHTML, suggestionStyle, buttons
 
