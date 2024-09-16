@@ -47,9 +47,9 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
     #Imports Census Data
     censusData = pandas.read_csv(dataSource)
 
-    #Subtracts two for header and zero indexing
-    rowCompare = int(rowCompare)
-    rowCompare -= 2
+    rowCompare = int(rowCompare) - 2
+    print(rowCompare)
+    print("Row Compare")
 
     #Traverses censusData, appends the rowCompare value as an int relative to Neighbourhood array
     df_geo = pandas.DataFrame(geoData.drop(columns="geometry"))
@@ -143,15 +143,16 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
     return fig 
 
 def censusBar (dataSource, rowSelect, fileName = None):
-    
     fig_bar = go.Figure()
-    rowSelect -= 2
     censusData = pandas.read_csv(dataSource)
+    rowSelect -= 2
     rowArray = censusData.iloc[rowSelect].to_list()
     graphTitle = rowArray[0]
     rowArray.pop(0) 
-    rowArrayFloat =  list(map(float, rowArray))
-    cityWideMedian = statistics.median(rowArrayFloat)
+    try:
+        rowArrayFloat =  list(map(float, rowArray))
+    except ValueError:
+        rowArrayFloat = rowArray
 
     x_values = censusData.columns.to_list()
     x_values.pop(0)
@@ -164,24 +165,28 @@ def censusBar (dataSource, rowSelect, fileName = None):
     ))
 
     x1_endpoint = len(fig_bar.data[0]["x"])
-    
-    fig_bar.add_shape(
-        type="line",
-        x0=-0.5,  
-        x1=x1_endpoint - 0.35,
-        y0=cityWideMedian,
-        y1=cityWideMedian,
-        line=dict(color="red", width=3, dash="dash"), 
-        name=f"City-wide Median<br>({cityWideMedian})"
-    )
-    fig_bar.add_trace(go.Scatter(
-        x=[None],  
-        y=[None],
-        mode="lines",
-        line=dict(color="red", width=2, dash="dash"),
-        showlegend=True,
-        name=f"City-wide Median<br>({cityWideMedian})"
-    ))
+
+    if isinstance(rowArrayFloat[2], float):
+        '''"Else" special case for if rowSelect = 1'''
+        cityWideMedian = statistics.median(rowArrayFloat) 
+            
+        fig_bar.add_shape(
+            type="line",
+            x0=-0.5,  
+            x1=x1_endpoint - 0.35,
+            y0=cityWideMedian,
+            y1=cityWideMedian,
+            line=dict(color="red", width=3, dash="dash"), 
+            name=f"City-wide Median<br>({cityWideMedian})"
+        )
+        fig_bar.add_trace(go.Scatter(
+            x=[None],  
+            y=[None],
+            mode="lines",
+            line=dict(color="red", width=2, dash="dash"),
+            showlegend=True,
+            name=f"City-wide Median<br>({cityWideMedian})"
+        ))
 
     fig_bar.update_layout(
         title={"text": graphTitle, "x": 0.5, "xanchor": "center", "yanchor": "top", "font": {"family": "proxima-nova, sans-serif", "weight": 700, "size": 25}},
@@ -198,33 +203,36 @@ def censusBar (dataSource, rowSelect, fileName = None):
 
 def censusBarStack (dataSource, input_array):
     i = 0 
+    n = 0
     rowArray = []
-    categoryValuesArray = {}
+    graphTitleArray = []
+    categoryValuesDict = {}
 
     #Load census csv data
 
     censusData = pandas.read_csv(dataSource)
 
     while i < len(input_array):
+        input_array[i] -= 2
         rowArray.append(censusData.iloc[input_array[i]])
+        graphTitleArray.append(censusData.iloc[i]["Neighbourhood Name"])
         i += 1
 
     for index, row in enumerate(rowArray):
         key = f"categoryValues_{index+1}"
-        categoryValuesArray[key] = list(map(float, row.iloc[1:].values))
+        categoryValuesDict[key] = list(map(float, row.iloc[1:].values))
 
     x_values = rowArray[0].index[1:]
-
     graphData = {"Neighbourhoood": x_values}
 
-    for key, y_values in categoryValuesArray.items():
+    for key, y_values in categoryValuesDict.items():
         graphData[key] = y_values
 
     graphDataFrame = pandas.DataFrame(graphData)
 
     plotMelt_censusData = graphDataFrame.melt(id_vars="Neighbourhoood", var_name="Category", value_name="Value")
 
-    print(plotMelt_censusData)
+    print(graphTitleArray)
 
     #Assign bar graph variable
     fig_bar_stack = go.Figure()
@@ -235,8 +243,9 @@ def censusBarStack (dataSource, input_array):
         fig_bar_stack.add_trace(go.Bar(
             x=category_data["Neighbourhoood"],
             y=category_data["Value"],
-            name=category
+            name=graphTitleArray[n]
         ))
+        n += 1
 
     #Render bar graph
     fig_bar_stack.update_layout(
@@ -247,7 +256,7 @@ def censusBarStack (dataSource, input_array):
     )
     return fig_bar_stack
 
-fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 35, "Respondents", [10, 43.710, -79.380, 2000, 1250])
+fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 35, "Values", [10, 43.710, -79.380, 2000, 1250])
 fig_bar = censusBar("data/CityCensusData.csv", 35)
 app = Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callbacks='initial_duplicate')
 
@@ -264,7 +273,7 @@ app.layout = html.Div(
                 html.Div(
                     className = "flex-col",
                     children=[
-                        dcc.Input(id="search", className="textbox", type="text", value="35", debounce = True),
+                        dcc.Input(id="search", className="textbox fulwidth", type="text", value="35", debounce = True),
                         html.Div(id="suggestion", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),
                         html.Div(id="output")
                     ]
@@ -281,14 +290,13 @@ app.layout = html.Div(
                     html.Div(
                         className = "flex-col",
                         children=[
-                            dcc.Input(id="multiVarInput", className="textbox", type="text", value="35", debounce = True),
+                            dcc.Input(id="multiVarInput", className="textbox fulwidth", type="text", value="35", debounce = True),
                             html.Div(id="suggestionStack", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),]
                     ),
-                html.Button("Add to Array",id="multiVarConfirm", n_clicks=0),
+                html.Button("Add or Search",id="multiVarConfirm", className="textbox addArray", n_clicks=0),
             ]
         ),
         html.Div(id="buttonContainer"),
-        html.Div(id="array-output"),
         dcc.Graph(id="graphBarStack", style={"height": "1060px"}),
     ]
 )
@@ -298,43 +306,57 @@ app.layout = html.Div(
     Output("graphBar", "figure"),
     Output("suggestion", "children"),
     Output("suggestion", "style")],
-    [Input("search", "value")]
+    [Input("search", "value"), 
+    Input({"type": "search-btn", "index": dash.dependencies.ALL}, 'n_clicks'),]
 )
 
-def update_output(value):
+def update_output(value, _):
     global figGlobal, figbarGlobal
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
     fig = figGlobal
     fig_bar = figbarGlobal
-    try:
-        value =  int(value) 
-        value += 2 
-        fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Respondents", [10, 43.710, -79.380, 2000, 1250])
+    ctx = dash.callback_context
+    if ctx.triggered and "search-btn" in ctx.triggered[0]["prop_id"]:
+        triggered = ctx.triggered
+        indexStr = triggered[0]["prop_id"].split('.')[0]
+        indexDic= json.loads(indexStr.replace("'", '"'))
+        print(indexDic)
+        if "index" in indexDic:
+            index = int(indexDic["index"]) 
+
+        print(index)
+        fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", index, "Values", [10, 43.710, -79.380, 2000, 1250])
         figGlobal = fig
-        fig_bar = censusBar("data/CityCensusData.csv", value)
+        fig_bar = censusBar("data/CityCensusData.csv", index)
         figbarGlobal = fig_bar
-    except ValueError:
-        censusData = pandas.read_csv("data/CityCensusData.csv")
-        suggestion = censusData[censusData["Neighbourhood Name"].str.contains(value, case=False, regex=False, na=False)]
-        indices = suggestion.index[:5]
-        suggestionsFive = suggestion.head(5)
-        suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
-        combinedList = [f"Row number: {ind} - {string}" for ind, string in zip(indices, suggestionList)]
-        suggestionHTML = html.Ul([html.Li([
-            html.Li(f"Row Number: {str(indices[i])} {suggestionList[i]}")
-            for i, p in enumerate(combinedList)
-        ])
-        ])
-        
-        
-        if suggestionList is not None: 
-             suggestionStyle = {"position": "relative", "display": "block"}
+    else:
+        try:
+            value =  int(value) 
+            fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Respondents", [10, 43.710, -79.380, 2000, 1250])
+            figGlobal = fig
+            fig_bar = censusBar("data/CityCensusData.csv", value)
+            figbarGlobal = fig_bar
+        except ValueError:
+            censusData = pandas.read_csv("data/CityCensusData.csv")
+            suggestion = censusData[censusData["Neighbourhood Name"].str.contains(value, case=False, regex=False, na=False)]
+            indices = suggestion.index[:5] + 2
+            suggestionsFive = suggestion.head(5)
+            suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
+            combinedList = [f"Row number: {ind} - {string}" for ind, string in zip(indices, suggestionList)]
+            suggestionHTML = html.Ul([html.Li([
+                html.Button (f"Row Number: {str(indices[i])} {suggestionList[i]}", className="textbox", id={"type": "search-btn", "index": int(indices[i])}, n_clicks=0)
+                for i, p in enumerate(combinedList)
+            ])
+            ])
+            
+            
+            if suggestionList is not None: 
+                suggestionStyle = {"position": "relative", "display": "block"}
         
     return fig, fig_bar, suggestionHTML, suggestionStyle
 
 @app.callback(
-    Output("array-output", "children"),
     Output("graphBarStack", "figure"),
     Output("suggestionStack", "children"),
     Output("suggestionStack", "style"),
@@ -394,7 +416,7 @@ def update_array(_, nc1, nc2, input_value):
         suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
         combinedList = [f"Row number: {ind} - {string}" for ind, string in zip(indices, suggestionList)]
         suggestionHTML = html.Ul([html.Li([
-            html.Button (f"Row Number: {str(indices[i])} {suggestionList[i]}", id={"type": "search-btn", "index": int(indices[i])}, n_clicks=0)
+            html.Button (f"Row Number: {str(indices[i] + 2)} {suggestionList[i]}", id={"type": "search-btn", "index": int(indices[i])}, n_clicks=0)
             for i, p in enumerate(combinedList)
         ])
         ])
@@ -409,9 +431,9 @@ def update_array(_, nc1, nc2, input_value):
         if suggestionList is not None: 
              suggestionStyle = {"position": "relative", "display": "block"}
         
-    buttons = [html.Button(val, id={"type": "remove-btn", "index": i}, n_clicks=0) for i, val in enumerate(input_array)]
+    buttons = [html.Button(val + 2, id={"type": "remove-btn", "index": i}, n_clicks=0) for i, val in enumerate(input_array)]
 
-    return input_array, fig_bar_stack, suggestionHTML, suggestionStyle, buttons
+    return fig_bar_stack, suggestionHTML, suggestionStyle, buttons
 
 
 '''
