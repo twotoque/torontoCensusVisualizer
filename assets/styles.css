@@ -35,6 +35,21 @@ ul {
     margin-left: 1.2rem;
     margin-top: 0.9rem;
 }
+.addArrayalt{ 
+    max-height: 3rem;
+    margin-top: 0.9rem;}
+
+.addArray:hover {
+    background-color: #fff; 
+    color: #6495ED; 
+    border: 1px solid #6495ED; 
+}
+
+.addArrayalt:hover {
+    background-color: #fff; 
+    color: #6495ED; 
+    border: 1px solid #6495ED; 
+}
 .flex-col{
     display: flex;
     width: 30rem;
@@ -67,4 +82,7 @@ ul {
 
 ul:empty {
     display: none;
+}
+.buttonContainer{
+    padding-bottom: 3rem;
 }

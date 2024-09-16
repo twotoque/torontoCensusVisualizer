@@ -1,17 +1,21 @@
-import plotly.graph_objects as go
-import geopandas as gpd 
-import pandas
 import json
 import dash
-import plotly.io as pio
-pio.kaleido.scope.mathjax = None
-from dash import Dash, html, dcc, Input, Output, State
+import pandas
+import textwrap
 import statistics
+import geopandas as gpd 
+import plotly.io as pio
+import plotly.graph_objects as go
+from dash import Dash, html, dcc, Input, Output, State
+pio.kaleido.scope.mathjax = None
 
 input_array = []
 figGlobal = go.Figure()
 figbarGlobal = go.Figure()
 figbarstackGlobal = go.Figure()
+neighbourhoodFilePath = "data/Neighbourhoods.geojson"
+censusFilePath =  "data/CityCensusData.csv"
+
 def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSettings, fileName=None):
     '''
     A function to convert a single row of census 2021 data to a map relative to Toronto's neighbourhoods. 
@@ -245,21 +249,25 @@ def censusBarStack (dataSource, input_array):
         fig_bar_stack.add_trace(go.Bar(
             x=category_data["Neighbourhoood"],
             y=category_data["Value"],
-            name=graphTitleArray[n]
+            name= "<br>".join(textwrap.wrap(graphTitleArray[n], width=18))
         ))
         n += 1
 
     #Render bar graph
     fig_bar_stack.update_layout(
-        title="Multi-variable stacked bar graph using Census 2021 data, City of Toronto",
         xaxis_title="Neighbourhoood",
         yaxis_title="Value",
-        barmode="stack"
+        barmode="stack",
+        hoverlabel= dict(font = dict(family = "proxima-nova, sans-serif")),
+        title={"text": "Multi-variable stacked bar graph using Census 2021 data, City of Toronto", "x": 0.5, "xanchor": "center", "yanchor": "top", "font": {"family": "proxima-nova, sans-serif", "weight": 700, "size": 25}},
+        xaxis_title_font=dict(family="proxima-nova, sans-serif"),
+        yaxis_title_font=dict(family="proxima-nova, sans-serif"),
+        font=dict(family="proxima-nova, sans-serif"),
     )
     return fig_bar_stack
 
-fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", 35, "Values", [10, 43.710, -79.380, 2000, 1250])
-fig_bar = censusBar("data/CityCensusData.csv", 35)
+fig = censusMap(neighbourhoodFilePath, censusFilePath , 35, "Values", [10, 43.710, -79.380, 2000, 1250])
+fig_bar = censusBar(censusFilePath, 35)
 app = Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callbacks='initial_duplicate')
 
 app.layout = html.Div(
@@ -279,7 +287,11 @@ app.layout = html.Div(
                         html.Div(id="suggestion", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),
                         html.Div(id="output")
                     ]
-                )
+                ),
+                html.Button("Export bar PDF", id="exportPDFBar", className="textbox addArray", n_clicks=0),
+                html.Button("Export map PDF", id="exportPDFMap", className="textbox addArrayalt", n_clicks=0),
+                dcc.Download(id="downloadPDFBar"),
+                dcc.Download(id="downloadPDFMap")
             ]
         ),
         dcc.Graph(id="graph", style={"height": "1060px"}),
@@ -293,12 +305,14 @@ app.layout = html.Div(
                         className = "flex-col",
                         children=[
                             dcc.Input(id="multiVarInput", className="textbox fulwidth", type="text", value="35", debounce = True),
-                            html.Div(id="suggestionStack", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),]
+                            html.Div(id="suggestionStack", className="textbox textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),]
                     ),
-                html.Button("Add or Search", id="multiVarConfirm", className=" textbox addArray", n_clicks=0),
+                html.Button("Add/Search", id="multiVarConfirm", className="textbox addArray", n_clicks=0),
+                html.Button("Export stack PDF", id="exportPDFStack", className="textbox addArrayalt", n_clicks=0),
+                dcc.Download(id="downloadPDFStack")
             ]
         ),
-        html.Div(id="buttonContainer"),
+        html.Div(id="buttonContainer", className="buttonContainer"),
         dcc.Graph(id="graphBarStack", style={"height": "1060px"}),
     ]
 )
@@ -307,17 +321,23 @@ app.layout = html.Div(
     [Output("graph", "figure"),
     Output("graphBar", "figure"),
     Output("suggestion", "children"),
-    Output("suggestion", "style")],
+    Output("suggestion", "style"),
+    Output("downloadPDFBar", "data"),
+    Output("downloadPDFMap", "data")],
     [Input("search", "value"), 
-    Input({"type": "search-btn", "index": dash.dependencies.ALL}, 'n_clicks'),]
+    Input({"type": "search-btn", "index": dash.dependencies.ALL}, "n_clicks"),
+    Input("exportPDFBar", "n_clicks"),
+    Input("exportPDFMap", "n_clicks")]
 )
 
-def update_output(value, _):
-    global figGlobal, figbarGlobal
+def update_output(value, _, exportPDFBar, exportPDFMap):
+    global figGlobal, figbarGlobal, neighbourhoodFilePath, censusFilePath
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
     fig = figGlobal
     fig_bar = figbarGlobal
+    exportFileBar = None
+    exportFileMap = None
     ctx = dash.callback_context
     if ctx.triggered and "search-btn" in ctx.triggered[0]["prop_id"]:
         triggered = ctx.triggered
@@ -328,19 +348,25 @@ def update_output(value, _):
             index = int(indexDic["index"]) 
 
         print(index)
-        fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", index, "Values", [10, 43.710, -79.380, 2000, 1250])
+        fig = censusMap(neighbourhoodFilePath, censusFilePath, index, "Values", [10, 43.710, -79.380, 2000, 1250])
         figGlobal = fig
-        fig_bar = censusBar("data/CityCensusData.csv", index)
+        fig_bar = censusBar(censusFilePath, index)
         figbarGlobal = fig_bar
+    elif ctx.triggered and "exportPDFBar" in ctx.triggered[0]["prop_id"]:
+        figbarGlobal.write_image("figBar.pdf", format="pdf", engine="kaleido", width = 3000)
+        exportFileBar = dcc.send_file("figBar.pdf")
+    elif ctx.triggered and "exportPDFMap" in ctx.triggered[0]["prop_id"]:
+        figGlobal.write_image("figMap.pdf", format="pdf", engine="kaleido", width = 3000)
+        exportFileMap = dcc.send_file("figMap.pdf")
     else:
         try:
             value =  int(value) 
-            fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", value, "Respondents", [10, 43.710, -79.380, 2000, 1250])
+            fig = censusMap(neighbourhoodFilePath, censusFilePath, value, "Value", [10, 43.710, -79.380, 2000, 1250])
             figGlobal = fig
-            fig_bar = censusBar("data/CityCensusData.csv", value)
+            fig_bar = censusBar(censusFilePath, value)
             figbarGlobal = fig_bar
         except ValueError:
-            censusData = pandas.read_csv("data/CityCensusData.csv")
+            censusData = pandas.read_csv(censusFilePath)
             suggestion = censusData[censusData["Neighbourhood Name"].str.contains(value, case=False, regex=False, na=False)]
             indices = suggestion.index[:5] + 2
             suggestionsFive = suggestion.head(5)
@@ -352,32 +378,33 @@ def update_output(value, _):
             ])
             ])
             
-            
             if suggestionList is not None: 
                 suggestionStyle = {"position": "relative", "display": "block"}
+                
         
-    return fig, fig_bar, suggestionHTML, suggestionStyle
+    return fig, fig_bar, suggestionHTML, suggestionStyle, exportFileBar, exportFileMap
 
 @app.callback(
     Output("graphBarStack", "figure"),
     Output("suggestionStack", "children"),
     Output("suggestionStack", "style"),
     Output('buttonContainer', 'children'),
+    Output("downloadPDFStack", "data"),
     Input("multiVarConfirm", "n_clicks"),
     Input({"type": "remove-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
     Input({"type": "search-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
+    Input("exportPDFStack", "n_clicks"),
     State("multiVarInput", "value")          
 )
 
-def update_array(_, nc1, nc2, input_value):
-    global input_array, figbarstackGlobal
+def update_array(_, nc1, nc2,exportFileStack, input_value):
+    global input_array, figbarstackGlobal, censusFilePath
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
     ctx = dash.callback_context
     fig_bar_stack = figbarstackGlobal
-    censusData = pandas.read_csv('data/CityCensusData.csv')
-    
-    
+    censusData = pandas.read_csv(censusFilePath)
+    exportFileStack = None
     if ctx.triggered and "remove-btn" in ctx.triggered[0]["prop_id"]:
         triggered = ctx.triggered
         indexStr = triggered[0]["prop_id"].split('.')[0]
@@ -388,7 +415,7 @@ def update_array(_, nc1, nc2, input_value):
             # Ensure index is valid and within bounds
             if index < len(input_array):
                 input_array.pop(index)
-        fig_bar_stack = censusBarStack("data/CityCensusData.csv", input_array)
+        fig_bar_stack = censusBarStack(censusFilePath, input_array)
         figbarstackGlobal = fig_bar_stack
     
     elif ctx.triggered and "search-btn" in ctx.triggered[0]["prop_id"]:
@@ -402,14 +429,18 @@ def update_array(_, nc1, nc2, input_value):
 
         print("Input array")
         print(input_array)
-        fig_bar_stack = censusBarStack("data/CityCensusData.csv", input_array)
+        fig_bar_stack = censusBarStack(censusFilePath, input_array)
         figbarstackGlobal = fig_bar_stack
+
+    elif ctx.triggered and "exportPDFStack" in ctx.triggered[0]["prop_id"]:
+        figbarstackGlobal.write_image("figStack.pdf", format="pdf", engine="kaleido", width = 3000)
+        exportFileStack = dcc.send_file("figStack.pdf")
 
     elif input_value.isnumeric():
         if ctx.triggered and int(input_value) <= 2604:
             input_array.append(int(input_value) - 2)  # Add input value to the array
             print(input_array)
-            fig_bar_stack = censusBarStack("data/CityCensusData.csv", input_array)
+            fig_bar_stack = censusBarStack(censusFilePath, input_array)
             figbarstackGlobal = fig_bar_stack
         elif ctx.triggered and int(input_value) > 2604 or ctx.triggered and int(input_value) < 2:
             raise ValueError ("Invaild input")
@@ -425,41 +456,14 @@ def update_array(_, nc1, nc2, input_value):
             for i, p in enumerate(combinedList)
         ])
         ])
-        ''' 
-        suggestionHTML = html.Ul([html.Li([
-            html.Li(f"Row Number: {str(indices[i])} {suggestionList[i]}")
-            for i, p in enumerate(combinedList)
-        ])
-        ])
-        '''
         
         if suggestionList is not None: 
              suggestionStyle = {"position": "relative", "display": "block"}
         
-    buttons = [html.Button(val + 2, id={"type": "remove-btn", "index": i}, className= "textbox addArray", n_clicks=0) for i, val in enumerate(input_array)]
+    buttons = [html.Button(f"{val + 2} - {censusData.iloc[val + 2]["Neighbourhood Name"]}", id={"type": "remove-btn", "index": i}, className= "textbox addArray", n_clicks=0) for i, val in enumerate(input_array)]
 
-    return fig_bar_stack, suggestionHTML, suggestionStyle, buttons
+    return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack
 
 
-'''
-@app.callback(
-    [Output("graph", "figure", allow_duplicate=True)],
-    [Input(f"neigh-{i}", 'n_clicks') for i in range(5)]
-)
-def update_output(*args):
-    global suggestionSearchGlobal  
-    ctx = dash.callback_context
-    if ctx.triggered:
-        triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    
-    if triggered_id == "neigh-0":
-        print(suggestionSearchGlobal[0])
-        fig = censusMap("data/Neighbourhoods.geojson", "data/CityCensusData.csv", int(suggestionSearchGlobal[0]), "Amount of Census 2021 respondents who listed driving as a method of transportation", "Respondents", [10, 43.710, -79.380, 2000, 1250])
-
-    print(f"Triggered ID: {triggered_id}")
-    print(suggestionSearchGlobal)
-
-    return fig
-'''
 if __name__ == '__main__':
     app.run_server(debug=True, port=8051)  
