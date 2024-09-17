@@ -22,6 +22,22 @@ ul {
     list-style-type: none;
     padding-left: 0%;
   }
+.flex-col-text ul{
+    list-style-type: disc !important; 
+
+}
+.spacebwn{
+    display: flex;
+    justify-content: space-between;
+    padding-top: 3rem;
+    padding-bottom: 2rem;
+    margin-left: 20rem;
+    margin-right: 20rem;
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 500;
+    gap: 2rem;
+}
 .flex {
     display: flex;
     justify-content: center;
@@ -49,6 +65,11 @@ ul {
     background-color: #fff; 
     color: #6495ED; 
     border: 1px solid #6495ED; 
+}
+.flex-col-text{
+    display: flex;
+    flex-direction: column;
+
 }
 .flex-col{
     display: flex;

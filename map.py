@@ -314,6 +314,28 @@ app.layout = html.Div(
         ),
         html.Div(id="buttonContainer", className="buttonContainer"),
         dcc.Graph(id="graphBarStack", style={"height": "1060px"}),
+        html.H1("About", style={"textAlign": "center", "font-size": "3.5rem"}),
+        html.Div(
+            className = "spacebwn",
+            children=[
+                html.Div (
+                    className = "flex-col-text",
+                    children = [
+                        html.P(["While working on a transportation user experience research project, there were some questions about transportation method demand in the recent 2021 census that caught my eye. The City of Toronto does provide neighbourhood profile data, but that is limited to the 2016 census data, and only looks at a single neighbourhood. ", 
+                        html.Strong("This tool aims to provide comparisons between all Toronto neighbourhoods, correlating to the 2021 census results.")]
+                        ),
+                        html.P("This tool uses Python, Plotly, Pandas, and GeoPandas to traverse the data. Dash is used to render the data to the front-end. Kaleido is used to assist with PDF rendering and exporting. Data is sourced from Toronto Open Data, specifically:"),
+                        html.Ul([html.Li(html.A("Neighbourhood census data (.xlsx, then converted to .csv)",href="https://open.toronto.ca/dataset/neighbourhood-profiles/")),
+                                 html.Li(html.A("Neighbourhood boundaries (.geojson)",href="https://open.toronto.ca/dataset/neighbourhoods/")),
+                                 html.Li(html.A("Ward boundaries (.geojson)",href="https://open.toronto.ca/dataset/wards-and-elected-councillors/")),
+                                 
+                                 
+                                 ]),
+                        html.P([html.Strong("This tool is not affiliated  nor endorsed by the City of Toronto or Statistics Canada."), " As such, please use at your own risk."])],
+                ),
+                html.Img(src="/assets/TorontoCensusGraph.svg", style={"width": "500px", "height": "auto"})
+            ],
+        )
     ]
 )
 
