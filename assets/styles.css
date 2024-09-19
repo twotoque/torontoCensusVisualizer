@@ -6,6 +6,8 @@ body {
     margin-right: 1rem;
     margin-left: 1rem;
     margin-top: 10rem;
+    margin-bottom: 5rem;
+    overflow-x: hidden;
     
 }
 h1{
@@ -14,6 +16,17 @@ h1{
     color: white;
     font-weight: 900;
     margin-bottom: 0;
+}
+a{
+    color: white;
+}
+.special-flex{
+    display: flex;
+    gap: 0.3rem;
+}
+a:hover{
+    color: #6495ED;
+    background-color: white;
 }
 h2 {
     color:white
@@ -45,6 +58,16 @@ ul {
     padding-bottom: 2rem;
     margin: 0;
     gap: 10px;
+}
+.greenArray {
+    background-color: #3fc380!important;
+    color: white !important;
+    border: 1px solid white !important; 
+}
+.greenArray:hover {
+    background-color: white!important;
+    color: #3fc380 !important;
+    border: 1px solid #3fc380 !important; 
 }
 .addArray{
     max-height: 3rem;
@@ -107,3 +130,47 @@ ul:empty {
 .buttonContainer{
     padding-bottom: 3rem;
 }
+.censusGraphic{
+    width: 40rem;
+    height: auto;
+}
+
+@media (max-width: 1700px) {
+    .spacebwn{
+        flex-direction: column;
+        margin-left: 8rem;
+        margin-right: 8rem;
+    }
+    .addArray{
+        max-height: 4rem;
+    }
+    .addArrayalt{
+        max-height: 4rem;
+    }
+    .censusGraphic{
+        align-self: center;
+    }
+}
+@media (max-width: 1000px) {
+    .flex{
+        flex-direction: column;
+        align-items: center;
+    }
+    .special-flex{
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+    }
+    h1{
+        font-size: 4rem;
+    }
+    .censusGraphic{
+        width: 20rem;
+        height: auto;
+        align-self: center;
+    }
+    body{
+        margin-top: 6rem;
+    }
+}
+

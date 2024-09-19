@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 from dash import Dash, html, dcc, Input, Output, State
 pio.kaleido.scope.mathjax = None
 
+#Constants for file paths
 neighbourhoodFilePath = "data/Neighbourhoods.geojson"
 censusFilePath =  "data/CityCensusData.csv"
 citywardsFilePath = "data/CityWards.geojson"
@@ -20,10 +21,8 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
     Parameters:
         geoDataFilePath - the path for the geoData (str to .geojson file path)
             "data/Neighbourhoods.geojson" for city-wide neighbourhood map
-            "data/Ward23Neighbourhoods.geojson" for Ward 23  neighbourhood map
         dataSource - the path for the data (str to .json file path)
             "data/CityCensusData.csv" for city-wide Census 2021 data
-            "data/Ward23CensusData.csv" for Ward 23 Census 2021 data
         rowCompare - the row in dataSource  to measure data from (int)
         title - the title of the graph (str)
         rowArrayBar - label for the variable (str)
@@ -31,8 +30,10 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
             [Zoom variable (float), latitude (float), longitude (float), export height (int) [optional], export width (int) [optional]]
             ---
             Use [11, 43.710, -79.380, 2000, 1250] for City of Toronto-wide maps
-            Use [12.6, 43.810, -79.245, 2000, 1250] for Ward 23 maps
         fileName - the path where you want to export the file in a PDF form. If left blank, the graph will not be exported. If this parameter is used, ensure mapZoomSettings have export heights and export widths (str)
+
+    Returns:
+        fig - a Plotly figure object (go.Figure)
     '''
     global citywardsFilePath
     #Opens up geoData, reads and converts it to a JSON (feature), then converts it to a FeatureCollection readable by plotly
@@ -145,6 +146,17 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
     return fig 
 
 def censusBar (dataSource, rowSelect, fileName = None):
+    '''
+    A function to convert an array of rows of census 2021 data to a stacked bar graph relative to Toronto's neighbourhoods. 
+    ----
+    Parameters:
+        dataSource - the file source for the Census Data (str)
+        rowSelect - the row in the census data to compare (ints)
+        fileName - the path where you want to export the file in a PDF form. If left blank, the graph will not be exported. If this parameter is used, ensure mapZoomSettings have export heights and export widths (str)
+
+    Returns:
+        fig_bar - a Plotly figure object (go.Figure)
+    '''
     fig_bar = go.Figure()
     censusData = pandas.read_csv(dataSource)
     rowSelect -= 2
@@ -204,6 +216,15 @@ def censusBar (dataSource, rowSelect, fileName = None):
 
 
 def censusBarStack (dataSource, input_array):
+    '''
+    A function to convert an array of rows of census 2021 data to a stacked bar graph relative to Toronto's neighbourhoods. 
+    ----
+    Parameters:
+        dataSource - the file source for the Census Data (str)
+        input_array - the array of rows to compare (array of ints)
+    Returns:
+        fig_bar_stack - a Plotly figure object (go.Figure)
+    '''
     i = 0 
     n = 0
     rowArray = []
@@ -236,8 +257,6 @@ def censusBarStack (dataSource, input_array):
 
     plotMelt_censusData = graphDataFrame.melt(id_vars="Neighbourhoood", var_name="Category", value_name="Value")
 
-    print(graphTitleArray)
-
     #Assign bar graph variable
     fig_bar_stack = go.Figure()
 
@@ -264,19 +283,19 @@ def censusBarStack (dataSource, input_array):
     )
     return fig_bar_stack
 
-fig = censusMap(neighbourhoodFilePath, censusFilePath , 35, "Values", [10, 43.710, -79.380, 2000, 1250])
-fig_bar = censusBar(censusFilePath, 35)
+fig = censusMap(neighbourhoodFilePath, censusFilePath , 37, "Values", [10, 43.710, -79.380, 2000, 1250])
+fig_bar = censusBar(censusFilePath, 37)
 app = Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callbacks='initial_duplicate')
 
 app.layout = html.Div(
     style={'color': '#252525'},
     children=[
         dcc.Store(id = "input_array", data=[]),
-        dcc.Store(id = "figGlobal", data=go.Figure()),
-        dcc.Store(id = "figbarGlobal", data=go.Figure()),
-        dcc.Store(id = "figbarstackGlobal", data=go.Figure()),
+        dcc.Store(id = "figGlobalData", data=go.Figure().to_dict()),
+        dcc.Store(id = "figbarGlobalData", data=go.Figure().to_dict()),
+        dcc.Store(id = "figbarstackGlobalData", data=go.Figure().to_dict()),
         html.H1("Toronto Census Visualizer", style={"textAlign": "center"}),
-        html.H3("By Derek Song, using data from Toronto Open Data", style={"textAlign": "center", "color": "white", "margin" : 0,}),
+        html.H3(["By ",  html.A("Derek Song", href="https://www.linkedin.com/in/dereksong/"), ", using data from ",  html.A("Toronto Open Data", href="#About")], style={"textAlign": "center", "color": "white", "margin" : 0,}),
         html.Div(
             className = "flex",
             children=[
@@ -285,13 +304,18 @@ app.layout = html.Div(
                 html.Div(
                     className = "flex-col",
                     children=[
-                        dcc.Input(id="search", className="textbox fulwidth", type="text", value="35", debounce = True),
+                        dcc.Input(id="search", className="textbox fulwidth", type="text", value="37", debounce = True),
                         html.Div(id="suggestion", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),
                         html.Div(id="output")
                     ]
                 ),
+                html.Div(
+                    className = "special-flex",
+                    children=[
                 html.Button("Export bar PDF", id="exportPDFBar", className="textbox addArray", n_clicks=0),
                 html.Button("Export map PDF", id="exportPDFMap", className="textbox addArrayalt", n_clicks=0),
+                    ]
+                ),
                 dcc.Download(id="downloadPDFBar"),
                 dcc.Download(id="downloadPDFMap")
             ]
@@ -306,24 +330,27 @@ app.layout = html.Div(
                     html.Div(
                         className = "flex-col",
                         children=[
-                            dcc.Input(id="multiVarInput", className="textbox fulwidth", type="text", value="35", debounce = True),
+                            dcc.Input(id="multiVarInput", className="textbox fulwidth", type="text", value="37", debounce = True),
                             html.Div(id="suggestionStack", className="textbox textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),]
+                    ),                    html.Div(
+                        className = "special-flex",
+                        children=[
+                html.Button("Add/Search", id="multiVarConfirm", className="textbox addArray greenArray", n_clicks=0),
+                html.Button("Export stack PDF", id="exportPDFStack", className="textbox addArrayalt", n_clicks=0),]
                     ),
-                html.Button("Add/Search", id="multiVarConfirm", className="textbox addArray", n_clicks=0),
-                html.Button("Export stack PDF", id="exportPDFStack", className="textbox addArrayalt", n_clicks=0),
                 dcc.Download(id="downloadPDFStack")
             ]
         ),
         html.Div(id="buttonContainer", className="buttonContainer"),
         dcc.Graph(id="graphBarStack", style={"height": "1060px"}),
-        html.H1("About", style={"textAlign": "center", "font-size": "3.5rem"}),
+        html.H1("About", id="About", style={"textAlign": "center", "font-size": "3.5rem"}),
         html.Div(
             className = "spacebwn",
             children=[
                 html.Div (
                     className = "flex-col-text",
                     children = [
-                        html.P(["While working on a transportation user experience research project, there were some questions about transportation method demand in the recent 2021 census that caught my eye. The City of Toronto does provide neighbourhood profile data, but that is limited to the 2016 census data, and only looks at a single neighbourhood. ", 
+                        html.P(["While working on a transportation user experience research project, there were some questions about transportation method demand in the recent 2021 census that I wanted to visualize. The City of Toronto does provide ", html.A("neighbourhood profile data", href="https://www.toronto.ca/city-government/data-research-maps/neighbourhoods-communities/neighbourhood-profiles/find-your-neighbourhood/#location=&lat=&lng=&zoom="), ", but that is limited to the 2016 census data, and only looks at a single neighbourhood. ", 
                         html.Strong("This tool aims to provide comparisons between all Toronto neighbourhoods, correlating to the 2021 census results.")]
                         ),
                         html.P("This tool uses Python, Plotly, Pandas, and GeoPandas to traverse the data. Dash is used to render the data to the front-end. Kaleido is used to assist with PDF rendering and exporting. Data is sourced from Toronto Open Data, specifically:"),
@@ -333,9 +360,10 @@ app.layout = html.Div(
                                  
                                  
                                  ]),
-                        html.P([html.Strong("This tool is not affiliated nor endorsed by the City of Toronto or Statistics Canada."), " As such, please use at your own risk."])],
+                        html.P([html.Strong("This tool is not affiliated nor endorsed by the City of Toronto or Statistics Canada."), " As such, please use at your own risk."]),
+                        html.P(["Github repository located ", html.A("here.", href="https://github.com/twotoque/torontoCensusVisualizer"), " By ", html.A("Derek Song", href="https://www.linkedin.com/in/dereksong/"), ", 2024"])]
                 ),
-                html.Img(src="/assets/TorontoCensusGraph.svg", style={"width": "500px", "height": "auto"})
+                html.Img(src="/assets/TorontoCensusGraph.svg", className = "censusGraphic")
             ],
         )
     ]
@@ -348,20 +376,44 @@ app.layout = html.Div(
     Output("suggestion", "style"),
     Output("downloadPDFBar", "data"),
     Output("downloadPDFMap", "data"),
-    Output("figGlobal", "data"),
-    Output("figbarGlobal", "data")],
+    Output("figGlobalData", "data"),
+    Output("figbarGlobalData", "data")],
     [Input("search", "value"), 
     Input({"type": "search-btn", "index": dash.dependencies.ALL}, "n_clicks"),
     Input("exportPDFBar", "n_clicks"),
     Input("exportPDFMap", "n_clicks"),
-    Input("figGlobal", "data"),
-    Input("figbarGlobal", "data")]
+    Input("figGlobalData", "data"),
+    Input("figbarGlobalData", "data")]
 )
 
-def update_output(value, _, exportPDFBar, exportPDFMap, figGlobal, figbarGlobal):
+def update_output(value, _, exportPDFBar, exportPDFMap, figGlobalData, figbarGlobalData):
+    '''
+    A function to generate single bars and map graphs, and to traverse for search suggestions. 
+    ----
+    Parameters:
+        value - a search value (int or str)
+        _ - an placeholder variable to execute the search button function (int)
+        exportPDFBar - an placeholder variable to execute the export PDF bar function (int)
+        exportPDFMap - an placeholder variable to execute the export PDF map function (int)
+        figGlobalData - client-side global data to cache the map (dcc.Store -> go.Figure())
+        figbarGlobalData - client-side global data to cache the single-bar graph (dcc.Store -> go.Figure())
+        neighbourhoodFilePath - server-side global data for the path to the neighbourhood geojson file (str)
+        censusFilePath - server-side global data for the path to the census csv file (str)
+    Returns:
+        fig - a Plotly figure object for the map (go.Figure)
+        fig_bar - a Plotly figure object for the single bar graph (go.Figure)
+        suggestionHTML - a list of HTML buttons for the search feature (Array of HTML buttons)
+        suggestionStyle - to trigger suggestion button and div visibility (Dictionary -> CSS styling)
+        exportFileBar - file as a result of exporting the single bar graph (PDF)
+        exportFileMap - file as a result of exporting the single bar map (PDF)
+        figGlobal - updated cache for map graph (Dictionary -> go.Figure())
+        figbarGlobal - updated cache for single bar graph (Dictionary -> go.Figure())
+    '''
     global neighbourhoodFilePath, censusFilePath
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
+    figGlobal = go.Figure(figGlobalData)
+    figbarGlobal = go.Figure(figbarGlobalData)
     fig = figGlobal
     fig_bar = figbarGlobal
     exportFileBar = None
@@ -384,7 +436,7 @@ def update_output(value, _, exportPDFBar, exportPDFMap, figGlobal, figbarGlobal)
         figbarGlobal.write_image("figBar.pdf", format="pdf", engine="kaleido", width = 3000)
         exportFileBar = dcc.send_file("figBar.pdf")
     elif ctx.triggered and "exportPDFMap" in ctx.triggered[0]["prop_id"]:
-        figGlobal.write_image("figMap.pdf", format="pdf", engine="kaleido", width = 3000)
+        figGlobal.write_image("figMap.pdf", format="pdf", engine="kaleido", width = 1300, height = 900)
         exportFileMap = dcc.send_file("figMap.pdf")
     else:
         try:
@@ -410,7 +462,7 @@ def update_output(value, _, exportPDFBar, exportPDFMap, figGlobal, figbarGlobal)
                 suggestionStyle = {"position": "relative", "display": "block"}
                 
         
-    return fig, fig_bar, suggestionHTML, suggestionStyle, exportFileBar, exportFileMap, figGlobal, figbarGlobal
+    return fig, fig_bar, suggestionHTML, suggestionStyle, exportFileBar, exportFileMap, figGlobal.to_dict(), figbarGlobal.to_dict()
 
 @app.callback(
     Output("graphBarStack", "figure"),
@@ -419,21 +471,42 @@ def update_output(value, _, exportPDFBar, exportPDFMap, figGlobal, figbarGlobal)
     Output('buttonContainer', 'children'),
     Output("downloadPDFStack", "data"),
     Output("input_array", "data"),
-    Output("figbarstackGlobal", "data"),
+    Output("figbarstackGlobalData", "data"),
     Input("multiVarConfirm", "n_clicks"),
     Input({"type": "remove-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
     Input({"type": "search-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
     Input("exportPDFStack", "n_clicks"),
     Input("input_array", "data"),
-    Input("figbarstackGlobal", "data"),
+    Input("figbarstackGlobalData", "data"),
     State("multiVarInput", "value")          
 )
 
-def update_array(_, nc1, nc2,exportFileStack, input_array, figbarstackGlobal, input_value):
+def update_array(_, nc1, nc2,exportFileStack, input_array, figbarstackGlobalData, input_value):
+    '''
+    A function to generate stacked bars, and to traverse for search suggestions. 
+    ----
+    Parameters:
+        _ - an placeholder variable to execute the stacked bar function given an row input (int)
+        nc1 - an placeholder variable to remove a row from the graph given an remove button input (int)
+        nc1 - an placeholder variable to execute the stacked bar function given an search button input (int)
+        exportFileStack - a variable to execute the export PDF stacked bar function (int)
+        input_array - client-side global data to cache and store the inputted arrays (dcc.Store -> Array)
+        figbarstackGlobalData - client-side global data to cache the stacked bar grpah (dcc.Store -> go.Figure())
+        input_value - the value inputted to add a trace to the stacked bar graph (dcc.State -> int)
+    Returns:
+        fig_bar_stack - a Plotly figure object for the stacked bar graph (go.Figure)
+        suggestionHTML - a list of HTML buttons for the search feature (Array of HTML buttons)
+        suggestionStyle - to trigger suggestion button and div visibility (Dictionary -> CSS styling)
+        buttons - the remove buttons (Array of HTML buttons)
+        exportFileStack - file as a result of exporting the stacked bar map (PDF)
+        input_array - updated cache for row inputs (Dictionary -> Array)
+        figbarstackGlobal - updated cache for stacked bar graph (Dictionary -> go.Figure())
+    '''
     global censusFilePath
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
     ctx = dash.callback_context
+    figbarstackGlobal = go.Figure(figbarstackGlobalData)
     fig_bar_stack = figbarstackGlobal
     censusData = pandas.read_csv(censusFilePath)
     exportFileStack = None
@@ -492,9 +565,9 @@ def update_array(_, nc1, nc2,exportFileStack, input_array, figbarstackGlobal, in
         if suggestionList is not None: 
              suggestionStyle = {"position": "relative", "display": "block"}
         
-    buttons = [html.Button(f"{val + 2} - {censusData.iloc[val + 2]["Neighbourhood Name"]}", id={"type": "remove-btn", "index": i}, className= "textbox addArray", n_clicks=0) for i, val in enumerate(input_array)]
+    buttons = [html.Button(f"{val + 2} - {censusData.iloc[val]["Neighbourhood Name"]}", id={"type": "remove-btn", "index": i}, className= "textbox addArray", n_clicks=0) for i, val in enumerate(input_array)]
 
-    return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack, input_array, figbarstackGlobal
+    return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack, input_array, figbarstackGlobal.to_dict()
 
 server = app.server
 
