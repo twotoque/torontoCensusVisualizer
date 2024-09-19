@@ -286,7 +286,7 @@ def censusBarStack (dataSource, input_array):
 fig = censusMap(neighbourhoodFilePath, censusFilePath , 37, "Values", [10, 43.710, -79.380, 2000, 1250])
 fig_bar = censusBar(censusFilePath, 37)
 app = Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callbacks='initial_duplicate')
-
+app.title = "Toronto Census Visualizer"
 app.layout = html.Div(
     style={'color': '#252525'},
     children=[
