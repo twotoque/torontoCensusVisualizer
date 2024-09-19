@@ -486,6 +486,7 @@ def update_array(_, nc1, nc2,exportFileStack, input_value):
 
     return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack
 
+server = app.server
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=8051)  
