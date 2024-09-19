@@ -9,7 +9,6 @@ import plotly.graph_objects as go
 from dash import Dash, html, dcc, Input, Output, State
 pio.kaleido.scope.mathjax = None
 
-input_array = []
 figGlobal = go.Figure()
 figbarGlobal = go.Figure()
 figbarstackGlobal = go.Figure()
@@ -273,6 +272,7 @@ app = Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callback
 app.layout = html.Div(
     style={'color': '#252525'},
     children=[
+        dcc.Store(id = "input_array", data=[]),
         html.H1("Toronto Census Visualizer", style={"textAlign": "center"}),
         html.H3("By Derek Song, using data from Toronto Open Data", style={"textAlign": "center", "color": "white", "margin" : 0,}),
         html.Div(
@@ -412,15 +412,17 @@ def update_output(value, _, exportPDFBar, exportPDFMap):
     Output("suggestionStack", "style"),
     Output('buttonContainer', 'children'),
     Output("downloadPDFStack", "data"),
+    Output("input_array", "data"),
     Input("multiVarConfirm", "n_clicks"),
     Input({"type": "remove-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
     Input({"type": "search-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
     Input("exportPDFStack", "n_clicks"),
+    Input("input_array", "data"),
     State("multiVarInput", "value")          
 )
 
-def update_array(_, nc1, nc2,exportFileStack, input_value):
-    global input_array, figbarstackGlobal, censusFilePath
+def update_array(_, nc1, nc2,exportFileStack, input_array, input_value):
+    global figbarstackGlobal, censusFilePath
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
     ctx = dash.callback_context
@@ -484,7 +486,7 @@ def update_array(_, nc1, nc2,exportFileStack, input_value):
         
     buttons = [html.Button(f"{val + 2} - {censusData.iloc[val + 2]["Neighbourhood Name"]}", id={"type": "remove-btn", "index": i}, className= "textbox addArray", n_clicks=0) for i, val in enumerate(input_array)]
 
-    return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack
+    return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack, input_array
 
 server = app.server
 
