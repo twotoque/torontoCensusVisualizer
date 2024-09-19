@@ -305,6 +305,7 @@ app.index_string = '''
         <meta property="og:image" content="/assets/thumbnail.png">
         <meta property="og:url" content="https://torontocensusvisualizer.com">
         <meta name="twitter:card" content="summary_large_image">
+        <link rel="stylesheet" href="/assets/styles.css">
         <title>Toronto Census Visualizer</title>
     </head>
     <body>
