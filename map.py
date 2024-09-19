@@ -51,9 +51,6 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
     censusData = pandas.read_csv(dataSource)
 
     rowCompare = int(rowCompare) - 2
-    print(rowCompare)
-    print("Row Compare")
-
     #Traverses censusData, appends the rowCompare value as an int relative to Neighbourhood array
     df_geo = pandas.DataFrame(geoData.drop(columns="geometry"))
     columnsSet = set(censusData.columns)
@@ -138,7 +135,19 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
             xanchor="left",  
             yanchor="middle",
             font = {"family": "proxima-nova, sans-serif"}
-        )
+        ),
+        annotations=[dict(
+            xref="paper", 
+            yref="paper", 
+            x=1.1, 
+            y=0.95,  
+            font = {"family": "proxima-nova, sans-serif"},
+            text ="Made with<br>torontocensusvisualizer.com",  
+            xanchor="left",  
+            yanchor="middle",
+            showarrow=False,
+            align="left"
+        )]
     )
 
     if fileName is not None and len(mapZoomSettings) == 5:
@@ -204,13 +213,13 @@ def censusBar (dataSource, rowSelect, fileName = None):
 
     fig_bar.update_layout(
         title={"text": graphTitle, "x": 0.5, "xanchor": "center", "yanchor": "top", "font": {"family": "proxima-nova, sans-serif", "weight": 700, "size": 25}},
-        xaxis_title= "Neighbourhood",
+        xaxis_title= "Neighbourhood<br> Made with torontocensusvisualizer.com",
         yaxis_title= "Value",
         hoverlabel= dict(font = dict(family = "proxima-nova, sans-serif")),
         title_font=dict(family="proxima-nova, sans-serif"),
         xaxis_title_font=dict(family="proxima-nova, sans-serif"),
         yaxis_title_font=dict(family="proxima-nova, sans-serif"),
-        font=dict(family="proxima-nova, sans-serif"),
+        font=dict(family="proxima-nova, sans-serif")
     )
     return fig_bar
 
@@ -272,14 +281,14 @@ def censusBarStack (dataSource, input_array):
 
     #Render bar graph
     fig_bar_stack.update_layout(
-        xaxis_title="Neighbourhoood",
+        xaxis_title="Neighbourhoood<br> Made with torontocensusvisualizer.com",
         yaxis_title="Value",
         barmode="stack",
         hoverlabel= dict(font = dict(family = "proxima-nova, sans-serif")),
         title={"text": "Multi-variable stacked bar graph using Census 2021 data, City of Toronto", "x": 0.5, "xanchor": "center", "yanchor": "top", "font": {"family": "proxima-nova, sans-serif", "weight": 700, "size": 25}},
         xaxis_title_font=dict(family="proxima-nova, sans-serif"),
         yaxis_title_font=dict(family="proxima-nova, sans-serif"),
-        font=dict(family="proxima-nova, sans-serif"),
+        font=dict(family="proxima-nova, sans-serif")
     )
     return fig_bar_stack
 
@@ -423,11 +432,8 @@ def update_output(value, _, exportPDFBar, exportPDFMap, figGlobalData, figbarGlo
         triggered = ctx.triggered
         indexStr = triggered[0]["prop_id"].split('.')[0]
         indexDic= json.loads(indexStr.replace("'", '"'))
-        print(indexDic)
         if "index" in indexDic:
             index = int(indexDic["index"]) 
-
-        print(index)
         fig = censusMap(neighbourhoodFilePath, censusFilePath, index, "Values", [10, 43.710, -79.380, 2000, 1250])
         figGlobal = fig
         fig_bar = censusBar(censusFilePath, index)
@@ -527,13 +533,9 @@ def update_array(_, nc1, nc2,exportFileStack, input_array, figbarstackGlobalData
         triggered = ctx.triggered
         indexStr = triggered[0]["prop_id"].split('.')[0]
         indexDic= json.loads(indexStr.replace("'", '"'))
-        print(indexDic)
         if "index" in indexDic:
             index = indexDic["index"]
             input_array.append(index - 2)
-
-        print("Input array")
-        print(input_array)
         fig_bar_stack = censusBarStack(censusFilePath, input_array)
         figbarstackGlobal = fig_bar_stack
 
@@ -544,7 +546,6 @@ def update_array(_, nc1, nc2,exportFileStack, input_array, figbarstackGlobalData
     elif input_value.isnumeric():
         if ctx.triggered and int(input_value) <= 2604:
             input_array.append(int(input_value) - 2)  # Add input value to the array
-            print(input_array)
             fig_bar_stack = censusBarStack(censusFilePath, input_array)
             figbarstackGlobal = fig_bar_stack
         elif ctx.triggered and int(input_value) > 2604 or ctx.triggered and int(input_value) < 2:
@@ -557,7 +558,7 @@ def update_array(_, nc1, nc2,exportFileStack, input_array, figbarstackGlobalData
         suggestionList = suggestionsFive["Neighbourhood Name"].tolist()
         combinedList = [f"Row number: {ind} - {string}" for ind, string in zip(indices, suggestionList)]
         suggestionHTML = html.Ul([html.Li([
-            html.Button (f"Row Number: {str(indices[i] + 2)} {suggestionList[i]}", id={"type": "search-btn", "index": int(indices[i] + 2)}, n_clicks=0)
+            html.Button (f"Row Number: {str(indices[i] + 2)} {suggestionList[i]}",className= "textbox", id={"type": "search-btn", "index": int(indices[i] + 2)}, n_clicks=0)
             for i, p in enumerate(combinedList)
         ])
         ])
@@ -565,7 +566,7 @@ def update_array(_, nc1, nc2,exportFileStack, input_array, figbarstackGlobalData
         if suggestionList is not None: 
              suggestionStyle = {"position": "relative", "display": "block"}
         
-    buttons = [html.Button(f"{val + 2} - {censusData.iloc[val]["Neighbourhood Name"]}", id={"type": "remove-btn", "index": i}, className= "textbox addArray", n_clicks=0) for i, val in enumerate(input_array)]
+    buttons = [html.Button(f"{val + 2} - {censusData.iloc[val]["Neighbourhood Name"]}", id={"type": "remove-btn", "index": i}, className= "textbox addArray ", n_clicks=0) for i, val in enumerate(input_array)]
 
     return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack, input_array, figbarstackGlobal.to_dict()
 
