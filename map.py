@@ -308,12 +308,12 @@ app.layout = html.Div(
         html.Div(
             className = "flex",
             children=[
-                html.H2("Enter row number from Census 2021 data", style={"marginRight": "20px"}),
+                html.H2("Enter row number from Census 2021 data", className="specialrowtitle"),
                 
                 html.Div(
                     className = "flex-col",
                     children=[
-                        dcc.Input(id="search", className="textbox fulwidth", type="text", value="37", debounce = True),
+                        dcc.Input(id="search", className="textbox fulwidth specialtextwidth", type="text", value="37", debounce = True),
                         html.Div(id="suggestion", className="textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),
                         html.Div(id="output")
                     ]
@@ -335,11 +335,11 @@ app.layout = html.Div(
                 html.Div(
             className = "flex",
             children=[
-                html.H2("Enter row number from Census 2021 data", style={"marginRight": "20px"}),
+                html.H2("Enter row number from Census 2021 data", className="specialrowtitle"),
                     html.Div(
                         className = "flex-col",
                         children=[
-                            dcc.Input(id="multiVarInput", className="textbox fulwidth", type="text", value="37", debounce = True),
+                            dcc.Input(id="multiVarInput", className="textbox fulwidth specialtextwidth", type="text", value="37", debounce = True),
                             html.Div(id="suggestionStack", className="textbox textbox-suggestion", children=[], style={"position": "relative", "display": "none"}),]
                     ),                    html.Div(
                         className = "special-flex",

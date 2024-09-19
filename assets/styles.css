@@ -28,6 +28,9 @@ a:hover{
     color: #6495ED;
     background-color: white;
 }
+.specialrowtitle{
+    margin-right: 20px;
+}
 h2 {
     color:white
 }
@@ -171,6 +174,20 @@ ul:empty {
     }
     body{
         margin-top: 6rem;
+    }
+    .spacebwn{
+        margin-left: 1rem;
+        margin-right: 1rem;
+    }
+    p:flex-col-text{
+        font-size: 5rem;
+    }
+    .specialtextwidth{
+        width: 70%;
+        align-self: center;
+    }
+    .specialrowtitle{
+        text-align: center;
     }
 }
 
