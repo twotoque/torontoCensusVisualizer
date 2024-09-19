@@ -9,9 +9,6 @@ import plotly.graph_objects as go
 from dash import Dash, html, dcc, Input, Output, State
 pio.kaleido.scope.mathjax = None
 
-figGlobal = go.Figure()
-figbarGlobal = go.Figure()
-figbarstackGlobal = go.Figure()
 neighbourhoodFilePath = "data/Neighbourhoods.geojson"
 censusFilePath =  "data/CityCensusData.csv"
 
@@ -273,6 +270,9 @@ app.layout = html.Div(
     style={'color': '#252525'},
     children=[
         dcc.Store(id = "input_array", data=[]),
+        dcc.Store(id = "figGlobal", data=go.Figure()),
+        dcc.Store(id = "figbarGlobal", data=go.Figure()),
+        dcc.Store(id = "figbarstackGlobal", data=go.Figure()),
         html.H1("Toronto Census Visualizer", style={"textAlign": "center"}),
         html.H3("By Derek Song, using data from Toronto Open Data", style={"textAlign": "center", "color": "white", "margin" : 0,}),
         html.Div(
@@ -345,15 +345,19 @@ app.layout = html.Div(
     Output("suggestion", "children"),
     Output("suggestion", "style"),
     Output("downloadPDFBar", "data"),
-    Output("downloadPDFMap", "data")],
+    Output("downloadPDFMap", "data"),
+    Output("figGlobal", "data"),
+    Output("figbarGlobal", "data")],
     [Input("search", "value"), 
     Input({"type": "search-btn", "index": dash.dependencies.ALL}, "n_clicks"),
     Input("exportPDFBar", "n_clicks"),
-    Input("exportPDFMap", "n_clicks")]
+    Input("exportPDFMap", "n_clicks"),
+    Input("figGlobal", "data"),
+    Input("figbarGlobal", "data")]
 )
 
-def update_output(value, _, exportPDFBar, exportPDFMap):
-    global figGlobal, figbarGlobal, neighbourhoodFilePath, censusFilePath
+def update_output(value, _, exportPDFBar, exportPDFMap, figGlobal, figbarGlobal):
+    global neighbourhoodFilePath, censusFilePath
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
     fig = figGlobal
@@ -404,7 +408,7 @@ def update_output(value, _, exportPDFBar, exportPDFMap):
                 suggestionStyle = {"position": "relative", "display": "block"}
                 
         
-    return fig, fig_bar, suggestionHTML, suggestionStyle, exportFileBar, exportFileMap
+    return fig, fig_bar, suggestionHTML, suggestionStyle, exportFileBar, exportFileMap, figGlobal, figbarGlobal
 
 @app.callback(
     Output("graphBarStack", "figure"),
@@ -413,16 +417,18 @@ def update_output(value, _, exportPDFBar, exportPDFMap):
     Output('buttonContainer', 'children'),
     Output("downloadPDFStack", "data"),
     Output("input_array", "data"),
+    Output("figbarstackGlobal", "data"),
     Input("multiVarConfirm", "n_clicks"),
     Input({"type": "remove-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
     Input({"type": "search-btn", "index": dash.dependencies.ALL}, 'n_clicks'),
     Input("exportPDFStack", "n_clicks"),
     Input("input_array", "data"),
+    Input("figbarstackGlobal", "data"),
     State("multiVarInput", "value")          
 )
 
-def update_array(_, nc1, nc2,exportFileStack, input_array, input_value):
-    global figbarstackGlobal, censusFilePath
+def update_array(_, nc1, nc2,exportFileStack, input_array, figbarstackGlobal, input_value):
+    global censusFilePath
     suggestionHTML = html.Ul([])
     suggestionStyle = {"position": "relative", "display": "none"}
     ctx = dash.callback_context
@@ -486,7 +492,7 @@ def update_array(_, nc1, nc2,exportFileStack, input_array, input_value):
         
     buttons = [html.Button(f"{val + 2} - {censusData.iloc[val + 2]["Neighbourhood Name"]}", id={"type": "remove-btn", "index": i}, className= "textbox addArray", n_clicks=0) for i, val in enumerate(input_array)]
 
-    return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack, input_array
+    return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack, input_array, figbarstackGlobal
 
 server = app.server
 
