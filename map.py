@@ -331,7 +331,7 @@ app.layout = html.Div(
                                  
                                  
                                  ]),
-                        html.P([html.Strong("This tool is not affiliated  nor endorsed by the City of Toronto or Statistics Canada."), " As such, please use at your own risk."])],
+                        html.P([html.Strong("This tool is not affiliated nor endorsed by the City of Toronto or Statistics Canada."), " As such, please use at your own risk."])],
                 ),
                 html.Img(src="/assets/TorontoCensusGraph.svg", style={"width": "500px", "height": "auto"})
             ],
