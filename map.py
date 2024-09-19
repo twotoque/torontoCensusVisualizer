@@ -11,6 +11,7 @@ pio.kaleido.scope.mathjax = None
 
 neighbourhoodFilePath = "data/Neighbourhoods.geojson"
 censusFilePath =  "data/CityCensusData.csv"
+citywardsFilePath = "data/CityWards.geojson"
 
 def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSettings, fileName=None):
     '''
@@ -33,6 +34,7 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
             Use [12.6, 43.810, -79.245, 2000, 1250] for Ward 23 maps
         fileName - the path where you want to export the file in a PDF form. If left blank, the graph will not be exported. If this parameter is used, ensure mapZoomSettings have export heights and export widths (str)
     '''
+    global citywardsFilePath
     #Opens up geoData, reads and converts it to a JSON (feature), then converts it to a FeatureCollection readable by plotly
     geoData = gpd.read_file(geoDataFilePath)
     geoDataJSON = geoData.to_json()
@@ -84,7 +86,7 @@ def censusMap (geoDataFilePath, dataSource, rowCompare, rowArrayBar, mapZoomSett
 
     #Appends ward outlines (opens up data, gets coords, and then adds a Scatter trace with each trace connected with a line)
 
-    cityGeoData = gpd.read_file("data/CityWards.geojson")
+    cityGeoData = gpd.read_file(citywardsFilePath)
     cityGeoDataJSON = cityGeoData.to_json()
     cityGeoDataDict = json.loads(cityGeoDataJSON)
     cityGeoDataDict = {
