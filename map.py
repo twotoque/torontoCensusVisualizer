@@ -296,6 +296,28 @@ fig = censusMap(neighbourhoodFilePath, censusFilePath , 37, "Values", [10, 43.71
 fig_bar = censusBar(censusFilePath, 37)
 app = Dash(__name__, suppress_callback_exceptions=True, prevent_initial_callbacks='initial_duplicate')
 app.title = "Toronto Census Visualizer"
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta property="og:title" content="Toronto Census Visualizer">
+        <meta property="og:description" content="A tool to visualize 2021 Census data with respect to Toronto's neighbourhoods">
+        <meta property="og:image" content="/assets/thumbnail.png">
+        <meta property="og:url" content="https://torontocensusvisualizer.com">
+        <meta name="twitter:card" content="summary_large_image">
+        <title>Toronto Census Visualizer</title>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
+
 app.layout = html.Div(
     style={'color': '#252525'},
     children=[
