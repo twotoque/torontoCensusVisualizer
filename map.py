@@ -326,7 +326,27 @@ app.layout = html.Div(
         dcc.Store(id = "figGlobalData", data=go.Figure().to_dict()),
         dcc.Store(id = "figbarGlobalData", data=go.Figure().to_dict()),
         dcc.Store(id = "figbarstackGlobalData", data=go.Figure().to_dict()),
+        html.Div([
+            html.H2("Toronto Census Visualizer is being evolved to add 20+ years of data and AI!", 
+                    style={"margin": "0"}), 
+            html.A(
+                html.Button("Learn more about version 2", className="textbox", style={"padding": "5px 15px"}),
+                href="https://github.com/twotoque/torontoCensusVisualizer2", 
+                target="_blank",
+                style={"marginLeft": "15px"}
+            )
+        ], style={
+            "display": "flex", 
+            "flexDirection": "row", 
+            "alignItems": "center",     
+            "justifyContent": "center", 
+            "backgroundColor": "#143169", 
+            "padding": "15px", 
+            "borderRadius": "5px", 
+            "marginBottom": "20px"
+        }),
         html.H1("Toronto Census Visualizer", style={"textAlign": "center"}),
+
         html.H3(["By ",  html.A("Derek Song", href="https://www.linkedin.com/in/dereksong/"), ", using data from ",  html.A("Toronto Open Data", href="#About")], style={"textAlign": "center", "color": "white", "margin" : 0,}),
         html.Div(
             className = "flex",
@@ -589,8 +609,8 @@ def update_array(_, nc1, nc2,exportFileStack, input_array, figbarstackGlobalData
         if suggestionList is not None: 
              suggestionStyle = {"position": "relative", "display": "block"}
         
-    buttons = [html.Button(f"{val + 2} - {censusData.iloc[val]["Neighbourhood Name"]}", id={"type": "remove-btn", "index": i}, className= "textbox addArray ", n_clicks=0) for i, val in enumerate(input_array)]
-
+    buttons = [html.Button(f"{val + 2} - {censusData.iloc[val]['Neighbourhood Name']}", id={"type": "remove-btn", "index": i}, className="textbox addArray ", n_clicks=0) for i, val in enumerate(input_array)]
+    
     return fig_bar_stack, suggestionHTML, suggestionStyle, buttons, exportFileStack, input_array, figbarstackGlobal.to_dict()
 
 server = app.server
