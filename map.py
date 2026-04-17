@@ -331,7 +331,7 @@ app.layout = html.Div(
                     style={"margin": "0"}), 
             html.A(
                 html.Button("Learn more about version 2", className="textbox", style={"padding": "5px 15px"}),
-                href="https://github.com/twotoque/torontoCensusVisualizer2", 
+                href="https://beta.torontocensusvisualizer.com", 
                 target="_blank",
                 style={"marginLeft": "15px"}
             )
